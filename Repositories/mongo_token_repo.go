@@ -1,4 +1,4 @@
-package infrastructure
+package repositories
 
 import (
 	domain "blog-api/Domain"
