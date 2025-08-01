@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"blog-api/Domain"
-	"blog-api/Usecases"
+	usecases "blog-api/Usecases"
 	"context"
 
 	"go.mongodb.org/mongo-driver/mongo"
