@@ -9,10 +9,11 @@ import (
 )
 
 func main() {
+	infrastructure.LoadEnv()
 	infrastructure.InitMongo()
 	userRepo := repositories.NewUserRepo(infrastructure.UserCollection())
-
-    userUsecase := usecases.NewUserUsecase(userRepo)
+    JwtService := infrastructure.NewJwtService()
+    userUsecase := usecases.NewUserUsecase(userRepo, JwtService)
 
     userController := controllers.NewUserController(userUsecase)
 
