@@ -9,33 +9,35 @@ import (
 
 type UserUsecase struct {
 	Repo UserRepoI
+	TokenService TokenI
 }
 
-func NewUserUsecase(repo UserRepoI) *UserUsecase {
+func NewUserUsecase(repo UserRepoI, tokenservice TokenI) *UserUsecase {
 	return &UserUsecase{
 		Repo: repo,
+		TokenService: tokenservice,
 	}
 }
 func (uc *UserUsecase) Register(user *domain.User) error {
 	err := uc.Repo.Register(user)
 	return err
 }
-
-func (uc *UserUsecase) AuthenticateUser(usernameOrEmail, password string) (*domain.User, error) {
+func (uc *UserUsecase) AuthenticateUser(usernameOrEmail, password string) (string, error) {
 	user, err := uc.Repo.CheckUserExists(usernameOrEmail, password)
 
 	if err != nil {
-		return nil, errors.New("database error:")
+		return "", errors.New("database error:")
 	}
 	if user == nil {
-		return nil, errors.New("invalid credentials")
+		return "", errors.New("invalid credentials")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return nil, errors.New("invalid credentials")
+		return "", errors.New("invalid credentials")
 	}
-
-	//TODO: token generation logic
-	//return token , nil
-	return user, nil
+    token , err := uc.TokenService.GenerateToken(user)    
+	if err != nil{
+		return "", errors.New("could not generate the token")
+	}
+	return token,nil
 }

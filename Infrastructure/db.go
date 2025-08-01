@@ -4,10 +4,7 @@ import (
     "context"
     "fmt"
     "log"
-    "os"
     "time"
-
-    "github.com/joho/godotenv"
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -16,9 +13,8 @@ var MongoClient *mongo.Client
 var MongoDB *mongo.Database
 
 func InitMongo() {
-    _ = godotenv.Load()
-    mongoURI := os.Getenv("MONGODB_URI")
-    dbName := os.Getenv("DB_NAME")
+    mongoURI := Env.MONGODB_URI
+    dbName := Env.DB_NAME
 
     ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
