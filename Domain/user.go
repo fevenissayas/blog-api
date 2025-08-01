@@ -22,5 +22,5 @@ type User struct {
     UpdatedAt    time.Time
     Bio          string
     ProfilePicture string
-	  ContactInfo  string
+	ContactInfo  string
 }
