@@ -17,7 +17,7 @@ func main() {
 
     userController := controllers.NewUserController(userUsecase)
 
-    router := router.SetUpRouter(userController)
-
+	router := router.SetUpRouter(userController, jwtService)
+	
     router.Run(":8080")
 }

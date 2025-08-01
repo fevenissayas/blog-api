@@ -1,10 +1,12 @@
 package infrastructure
+
 import (
-    "github.com/golang-jwt/jwt/v5"
-	"blog-api/Usecases"
 	"blog-api/Domain"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"blog-api/Usecases"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 type JwtService struct{
 }
@@ -30,4 +32,27 @@ func (js *JwtService) GenerateToken(user *domain.User)(string, error){
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtKey)
+}
+
+func (js *JwtService) ValidateToken(tokenString string) (*Claims, error) {
+	jwtKey := []byte(Env.Jwt_Secret)
+
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		// Verify the signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return jwtKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		return nil, jwt.ErrTokenInvalid
+	}
+
+	return claims, nil
 }
