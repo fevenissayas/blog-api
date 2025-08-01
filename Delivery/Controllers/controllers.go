@@ -35,3 +35,19 @@ func (uc *UserController) Register (c *gin.Context){
 	}
 	c.IndentedJSON(http.StatusCreated, gin.H{"message":"Succesfully Registered User"})
 }
+
+func (uc *UserController) Login(c *gin.Context){
+	var req domain.LoginRequest
+	if err := c.BindJSON(&req); err != nil{
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	token, err := uc.UserUsecase.AuthenticateUser(req.UsernameOrEmail, req.Password)
+	if err != nil {
+		c.IndentedJSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, gin.H{"token": token})
+
+}
