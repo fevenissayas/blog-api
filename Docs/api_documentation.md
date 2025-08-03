@@ -105,7 +105,6 @@ Replace `<port>` with your server’s port (e.g. `8080`).
 
 ---
 
-
 ### 3. Refresh Token
 
 - **URL:** `/auth/refresh`
@@ -123,7 +122,6 @@ Authorization: Bearer <refresh_token>
 ```bash
 curl -X POST http://localhost:8080/auth/refresh   -H "Authorization: Bearer <your_refresh_token>"
 ```
-
 #### Success Response (200 OK)
 
 ```json
