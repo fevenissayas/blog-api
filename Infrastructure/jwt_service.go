@@ -23,8 +23,9 @@ func NewJWTService() domain.IJWTService {
 }
 
 type JwtCustomAccessClaims struct {
-	Email string
-	Role  domain.Role
+	UserID string
+	Email  string
+	Role   domain.Role
 	jwt.RegisteredClaims
 }
 
@@ -37,8 +38,9 @@ type JwtCustomRefreshClaims struct {
 func (j *JWTService) CreateAccessToken(user *domain.User) (string, error) {
 
 	claims := JwtCustomAccessClaims{
-		Email: user.Email,
-		Role:  user.Role,
+		UserID: user.ID,
+		Email:  user.Email,
+		Role:   user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.Email,
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -109,8 +111,9 @@ func (j *JWTService) ValidateAccessToken(tokenString string) (*domain.AccessToke
 	}
 
 	return &domain.AccessTokenPayload{
-		Email: claims.Email,
-		Role:  claims.Role,
+		UserID: claims.UserID,
+		Email:  claims.Email,
+		Role:   claims.Role,
 	}, nil
 }
 func (j *JWTService) ValidateRefreshToken(tokenString string) (*domain.RefreshTokenPayload, error) {
