@@ -9,8 +9,9 @@ type Blog struct {
 	ID             string
 	Title          string
     Content        string
-	User 		   User
-	Tags           string
+	UserID 		   string
+	Tags           []string
+	ViewCount 		int
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
