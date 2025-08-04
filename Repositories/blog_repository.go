@@ -67,3 +67,45 @@ func (r *blogRepository) Create(ctx context.Context, blog *domain.Blog) (*domain
 
 	return blog, nil
 }
+
+func (r *blogRepository) FindByID(ctx context.Context, blogID string) (*domain.Blog, error) {
+	objID, err := primitive.ObjectIDFromHex(blogID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid blog ID format: %w", err)
+	}
+
+	var blogDoc blogModel
+	err = r.blogCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&blogDoc)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, fmt.Errorf("blog not found")
+		}
+		return nil, fmt.Errorf("failed to find blog: %w", err)
+	}
+
+	domainBlog := toDomainBlog(blogDoc)
+	return &domainBlog, nil
+}
+
+func (r *blogRepository) Update(ctx context.Context, blog *domain.Blog) (*domain.Blog, error) {
+	objID, err := primitive.ObjectIDFromHex(blog.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid blog ID: %w", err)
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"title":     blog.Title,
+			"content":   blog.Content,
+			"tags":      blog.Tags,
+			"updatedAt": blog.UpdatedAt,
+		},
+	}
+
+	_, err = r.blogCollection.UpdateByID(ctx, objID, update)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update blog: %w", err)
+	}
+
+	return blog, nil
+}
