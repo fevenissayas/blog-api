@@ -23,24 +23,27 @@ func NewJWTService() domain.IJWTService {
 }
 
 type JwtCustomAccessClaims struct {
-	UserID string
-	Email  string
-	Role   domain.Role
+	UserID    string
+	Email     string
+	Role      domain.Role
+	TokenType string
 	jwt.RegisteredClaims
 }
 
 type JwtCustomRefreshClaims struct {
-	TokenID string
-	UserID  string
+	TokenID   string
+	UserID    string
+	TokenType string
 	jwt.RegisteredClaims
 }
 
 func (j *JWTService) CreateAccessToken(user *domain.User) (string, error) {
 
 	claims := JwtCustomAccessClaims{
-		UserID: user.ID,
-		Email:  user.Email,
-		Role:   user.Role,
+		UserID:    user.ID,
+		Email:     user.Email,
+		Role:      user.Role,
+		TokenType: "access",
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.Email,
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -66,8 +69,9 @@ func (j *JWTService) CreateRefreshToken(user *domain.User) (string, *domain.Refr
 	expiresAt := issuedAt.Add(7 * 24 * time.Hour)
 
 	claims := JwtCustomRefreshClaims{
-		TokenID: tokenID,
-		UserID:  user.ID,
+		TokenID:   tokenID,
+		UserID:    user.ID,
+		TokenType: "refresh",
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(issuedAt),
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
@@ -109,6 +113,13 @@ func (j *JWTService) ValidateAccessToken(tokenString string) (*domain.AccessToke
 	if !ok {
 		return nil, fmt.Errorf("invalid token claims: %w", err)
 	}
+	if claims.Issuer != "blog-api" {
+		return nil, fmt.Errorf("invalid issuer")
+	}
+
+	if claims.TokenType != "access" {
+		return nil, fmt.Errorf("invalid token type: expected access token")
+	}
 
 	return &domain.AccessTokenPayload{
 		UserID: claims.UserID,
@@ -131,6 +142,9 @@ func (j *JWTService) ValidateRefreshToken(tokenString string) (*domain.RefreshTo
 	claims, ok := token.Claims.(*JwtCustomRefreshClaims)
 	if !ok {
 		return nil, fmt.Errorf("invalid token claims: %w", err)
+	}
+	if claims.TokenType != "refresh" {
+		return nil, fmt.Errorf("invalid token type: expected refresh token")
 	}
 
 	if claims.Issuer != "blog-api" {

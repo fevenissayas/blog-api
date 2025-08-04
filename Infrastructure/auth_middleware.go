@@ -20,7 +20,7 @@ func NewAuthMiddleware(JWTService domain.IJWTService) *AuthMiddleware {
 	return &AuthMiddleware{JWTService: JWTService}
 }
 
-func (a *AuthMiddleware) MiddleWare() gin.HandlerFunc {
+func (a *AuthMiddleware) Middleware() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		auth := c.GetHeader(authHeader)
