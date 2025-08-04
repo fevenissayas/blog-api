@@ -134,3 +134,29 @@ func (uc *UserUsecase) Login(ctx context.Context, user *domain.User) (*domain.To
 		RefreshToken: refreshToken,
 	}, nil
 }
+
+
+func (uc *UserUsecase) Logout(ctx context.Context, userID string) error {
+	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
+	defer cancel()
+
+	if userID == "" {
+		return domain.ErrInvalidInput
+	}
+	
+	_, err := uc.userRepository.GetByID(ctx, userID)
+	if err != nil {
+		if err == domain.ErrUserNotFound {
+			return domain.ErrUserNotFound
+		}
+		return fmt.Errorf("failed to fetch user: %w", err)
+	}
+
+	//delete all refresh tokens for the user
+	err = uc.refreshTokenRepo.DeleteAllTokensForUser(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to logout user: %w", err)
+	}
+
+	return nil
+}

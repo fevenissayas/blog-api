@@ -97,3 +97,17 @@ func (c *UserController) LoginHandler(ctx *gin.Context) {
 		"refresh_token": tokens.RefreshToken,
 	})
 }
+
+func (c *UserController) LogoutHandler(ctx *gin.Context) {
+	userID, ok := getAuthenticatedUserID(ctx)
+	if !ok {
+		return
+	}
+
+	if err := c.userUsecase.Logout(ctx, userID); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}

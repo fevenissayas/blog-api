@@ -15,11 +15,12 @@ func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController,
 		authRoutes.POST("/register", uc.RegisterHandler)
 		authRoutes.POST("/login", uc.LoginHandler)
 		authRoutes.POST("/refresh", ac.RefreshTokenHandler)
+		authRoutes.POST("/logout",authMiddleware.Middleware(),uc.LogoutHandler)
 	}
 
 	blogRoutes := router.Group("/blogs")
 	{
-		blogRoutes.POST("/",authMiddleware.Middleware(),bc.Create)
+		blogRoutes.POST("/",authMiddleware.Middleware(),bc.CreateBlogHandler)
 		blogRoutes.PUT("/:id",authMiddleware.Middleware(),bc.UpdateBlogHandler)
 	}
 

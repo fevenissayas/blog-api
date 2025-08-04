@@ -28,7 +28,7 @@ func NewBlogController(blogUsecase domain.IBlogUsecase) *BlogController {
 	return &BlogController{blogUsecase: blogUsecase}
 }
 
-func (bc *BlogController) Create(ctx *gin.Context) {
+func (bc *BlogController) CreateBlogHandler(ctx *gin.Context) {
 	var req createBlogRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON body"})

@@ -37,4 +37,5 @@ type IUserRepository interface {
 type IUserUsecase interface {
 	Register(ctx context.Context, user *User) error
 	Login(ctx context.Context, user *User) (*TokenResponse, error)
+	Logout(ctx context.Context, userID string) error
 }
