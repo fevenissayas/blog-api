@@ -150,3 +150,23 @@ func (r *userRepository) Promote (ctx context.Context, user *domain.User)(error)
 	}
 	return nil
 }
+
+func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
+	objID, err := primitive.ObjectIDFromHex(user.ID)
+	if err != nil {
+		return fmt.Errorf("invalid user ID: %w", err)
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"bio": user.Bio,
+			"profile_picture": user.ProfilePicture,
+			"contact_info": user.ContactInfo,
+			"updatedAt": user.UpdatedAt,
+		},
+	}
+	_, err = r.userCollection.UpdateByID(ctx, objID, update)
+	if err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+	return nil
+}
