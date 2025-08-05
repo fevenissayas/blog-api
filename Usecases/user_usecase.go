@@ -160,3 +160,13 @@ func (uc *UserUsecase) Logout(ctx context.Context, userID string) error {
 
 	return nil
 }
+func (uc *UserUsecase) Promote (ctx context.Context, username string) error{
+	user,err := uc.userRepository.GetByUsername(ctx,username)
+	if err != nil{
+		return err
+	}
+	if user.Role == "admin"{
+		return errors.New("user is already an admin")
+	}
+    return uc.userRepository.Promote(ctx,user)
+}

@@ -29,7 +29,9 @@ type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
-
+type PromotionRequest struct{
+	Username string `json:"username"`
+}
 func (c *UserController) RegisterHandler(ctx *gin.Context) {
 	var req RegisterRequest
 
@@ -110,4 +112,21 @@ func (c *UserController) LogoutHandler(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}
+func (c *UserController) Promote (ctx *gin.Context){
+	role := ctx.GetString("role")
+	if role != "admin" {
+		ctx.IndentedJSON(http.StatusUnauthorized, gin.H{"error":"only admin can promote user"})
+	}
+	var pq PromotionRequest
+	if err := ctx.ShouldBindJSON(&pq); err != nil{
+		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error":err.Error()})	
+		return
+	}
+	if err := c.userUsecase.Promote(ctx, pq.Username);err!=nil{
+		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error":err.Error()})
+		return
+	}
+	ctx.IndentedJSON(http.StatusOK, gin.H{"message":"Successfully Promoted User"})
+
 }

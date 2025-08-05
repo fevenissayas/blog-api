@@ -133,3 +133,20 @@ func (r *userRepository) ExistsByUsername(ctx context.Context, username string) 
 	}
 	return count > 0, nil
 }
+func (r *userRepository) Promote (ctx context.Context, user domain.User)(error){
+	objID, err := primitive.ObjectIDFromHex(user.ID)
+	if err != nil {
+		return fmt.Errorf("invalid blog ID: %w", err)
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"role": domain.RoleAdmin,
+			"updatedAt": user.UpdatedAt,
+		},
+	}
+	_, err = r.userCollection.UpdateByID(ctx, objID, update)
+	if err != nil {
+		return fmt.Errorf("failed to update blog: %w", err)
+	}
+	return nil
+}
