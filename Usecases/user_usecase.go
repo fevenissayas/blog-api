@@ -170,3 +170,38 @@ func (uc *UserUsecase) Promote (ctx context.Context, username string) error{
 	}
     return uc.userRepository.Promote(ctx,user)
 }
+
+func (uc *UserUsecase) UpdateProfile(ctx context.Context, username string, bio, profilePicture, contactInfo string) error {
+	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
+	defer cancel()
+
+	user, err := uc.userRepository.GetByUsername(ctx, username)
+	if err != nil {
+		if err == domain.ErrUserNotFound {
+			return domain.ErrUserNotFound
+		}
+		return fmt.Errorf("failed to fetch user: %w", err)
+	}
+
+	updated := false
+	if bio != "" && user.Bio != bio {
+		user.Bio = bio
+		updated = true
+	}
+	if profilePicture != "" && user.ProfilePicture != profilePicture {
+		user.ProfilePicture = profilePicture
+		updated = true
+	}
+	if contactInfo != "" && user.ContactInfo != contactInfo {
+		user.ContactInfo = contactInfo
+		updated = true
+	}
+	if !updated {
+		return nil
+	}
+
+	user.UpdatedAt = time.Now()
+
+   
+   return uc.userRepository.Update(ctx, user)
+}

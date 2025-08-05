@@ -17,6 +17,7 @@ func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController,
 		authRoutes.POST("/refresh", ac.RefreshTokenHandler)
 		authRoutes.POST("/logout",authMiddleware.Middleware(),uc.LogoutHandler)
 		authRoutes.POST("/promote", authMiddleware.Middleware(),uc.Promote)
+		authRoutes.POST("/update", authMiddleware.Middleware(), uc.UpdateProfile)
 	}
 
 	blogRoutes := router.Group("/blogs")
