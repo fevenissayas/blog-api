@@ -133,7 +133,7 @@ func (r *userRepository) ExistsByUsername(ctx context.Context, username string) 
 	}
 	return count > 0, nil
 }
-func (r *userRepository) Promote (ctx context.Context, user domain.User)(error){
+func (r *userRepository) Promote (ctx context.Context, user *domain.User)(error){
 	objID, err := primitive.ObjectIDFromHex(user.ID)
 	if err != nil {
 		return fmt.Errorf("invalid blog ID: %w", err)
