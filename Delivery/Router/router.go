@@ -24,6 +24,7 @@ func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController,
 	{
 		blogRoutes.POST("/",authMiddleware.Middleware(),bc.CreateBlogHandler)
 		blogRoutes.PUT("/:id",authMiddleware.Middleware(),bc.UpdateBlogHandler)
+		blogRoutes.DELETE("/:id",authMiddleware.Middleware(),bc.DeleteBlog)
 	}
 
 	return router
