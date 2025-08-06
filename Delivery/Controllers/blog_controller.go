@@ -89,3 +89,17 @@ func (bc *BlogController) UpdateBlogHandler(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, updatedBlog)
 }
+
+func (bc *BlogController) DeleteBlog(ctx *gin.Context) {
+	blogID := ctx.Param("id")
+	userID, ok := getAuthenticatedUserID(ctx)
+	if !ok {
+		return
+	}
+	userRole := ctx.GetString("role")
+	if err := bc.blogUsecase.DeleteBlog(ctx, blogID, userID, userRole); err != nil {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Blog deleted successfully"})
+}
