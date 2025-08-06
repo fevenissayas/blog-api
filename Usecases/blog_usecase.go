@@ -20,7 +20,7 @@ func NewBlogUseCase(blogRepo domain.IBlogRepository) domain.IBlogUsecase {
 func (bu *BlogUsecase) Create(ctx context.Context, blog *domain.Blog) error {
 
 	if blog.Title == "" || blog.Content == "" || len(blog.Tags) == 0 {
-		return  fmt.Errorf("invalid input: title/content/tags must not be empty")
+		return fmt.Errorf("invalid input: title/content/tags must not be empty")
 	}
 	_, err := bu.blogRepository.Create(ctx, blog)
 
@@ -58,4 +58,15 @@ func (bu *BlogUsecase) Update(ctx context.Context, input domain.UpdateBlogInput)
 	}
 
 	return updatedBlog, nil
+}
+
+func (bu *BlogUsecase) DeleteBlog(ctx context.Context, blogID, userID, userRole string) error {
+	blog, err := bu.blogRepository.FindByID(ctx, blogID)
+	if err != nil {
+		return fmt.Errorf("blog not found")
+	}
+	if blog.UserID != userID && userRole != "admin" {
+		return fmt.Errorf("unauthorized: only the author or admin can delete this blog")
+	}
+	return bu.blogRepository.DeleteBlog(ctx, blog)
 }
