@@ -13,26 +13,26 @@ import (
 )
 
 type blogModel struct {
-	ID             primitive.ObjectID `bson:"_id"`
-	Title          string             `bson:"title"`
-	Content        string             `bson:"content"`
-	UserID         string		  	  `bson:"user_id"`
-	Tags           []string			  `bson:"tags"`
-	ViewCount 	   int				  `bson:"view_count"`
-	CreatedAt      time.Time          `bson:"createdAt"`
-	UpdatedAt      time.Time          `bson:"updatedAt"`
+	ID        primitive.ObjectID `bson:"_id"`
+	Title     string             `bson:"title"`
+	Content   string             `bson:"content"`
+	UserID    string             `bson:"user_id"`
+	Tags      []string           `bson:"tags"`
+	ViewCount int                `bson:"view_count"`
+	CreatedAt time.Time          `bson:"createdAt"`
+	UpdatedAt time.Time          `bson:"updatedAt"`
 }
 
 func toDomainBlog(m blogModel) domain.Blog {
 	return domain.Blog{
-		ID:             m.ID.Hex(),
-		Title:          m.Title,
-		Content:        m.Content,
-		Tags:			m.Tags,
-		UserID:			m.UserID,
-		ViewCount: 		m.ViewCount,
-		CreatedAt:      m.CreatedAt,
-		UpdatedAt:      m.UpdatedAt,
+		ID:        m.ID.Hex(),
+		Title:     m.Title,
+		Content:   m.Content,
+		Tags:      m.Tags,
+		UserID:    m.UserID,
+		ViewCount: m.ViewCount,
+		CreatedAt: m.CreatedAt,
+		UpdatedAt: m.UpdatedAt,
 	}
 }
 
@@ -51,14 +51,14 @@ func (r *blogRepository) Create(ctx context.Context, blog *domain.Blog) (*domain
 	blog.ID = blogObjectID.Hex()
 
 	doc := bson.M{
-		"_id":             blogObjectID,
-		"title":           blog.Title,
-		"content":         blog.Content,
-		"tags":            blog.Tags,
-		"view_count": 	   blog.ViewCount,
-		"user_id":         blog.UserID,
-		"createdAt":       blog.CreatedAt,
-		"updatedAt":       blog.UpdatedAt,
+		"_id":        blogObjectID,
+		"title":      blog.Title,
+		"content":    blog.Content,
+		"tags":       blog.Tags,
+		"view_count": blog.ViewCount,
+		"user_id":    blog.UserID,
+		"createdAt":  blog.CreatedAt,
+		"updatedAt":  blog.UpdatedAt,
 	}
 
 	_, err := r.blogCollection.InsertOne(ctx, doc)
@@ -153,4 +153,16 @@ func (r *blogRepository) Filter(ctx context.Context, tag string, date string, so
 		blogs = append(blogs, toDomainBlog(b))
 	}
 	return blogs, nil
+}
+
+func (r *blogRepository) DeleteBlog(ctx context.Context, blog *domain.Blog) error {
+	objID, err := primitive.ObjectIDFromHex(blog.ID)
+	if err != nil {
+		return fmt.Errorf("invalid blog ID: %w", err)
+	}
+	_, err = r.blogCollection.DeleteOne(ctx, bson.M{"_id": objID})
+	if err != nil {
+		return fmt.Errorf("failed to delete blog: %w", err)
+	}
+	return nil
 }

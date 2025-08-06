@@ -25,10 +25,10 @@ func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController,
 
 	blogRoutes := router.Group("/blogs")
 	{
-		blogRoutes.POST("/", authMiddleware.Middleware(), bc.CreateBlogHandler)
-		blogRoutes.PUT("/:id", authMiddleware.Middleware(), bc.UpdateBlogHandler)
+		blogRoutes.POST("/",authMiddleware.Middleware(),bc.CreateBlogHandler)
+		blogRoutes.PUT("/:id",authMiddleware.Middleware(),bc.UpdateBlogHandler)
+		blogRoutes.DELETE("/:id",authMiddleware.Middleware(),bc.DeleteBlog)
 		blogRoutes.GET("/filter", authMiddleware.Middleware(), bc.FilterBlogsHandler)
-
 	}
 
 	return router
