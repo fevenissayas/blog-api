@@ -2,12 +2,14 @@ package infrastructure
 
 import (
 	domain "blog-api/Domain"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/wagslane/go-password-validator"
+	passwordvalidator "github.com/wagslane/go-password-validator"
 )
 
 const minEntropyBits = 60 //for password validation
@@ -31,12 +33,24 @@ func (p *passwordService) Compare(hashed, plain string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashed), []byte(plain))
 }
 
-func (p *passwordService) ValidateStrength( password string) error{
-	err := passwordvalidator.Validate(password,minEntropyBits)
+func (p *passwordService) ValidateStrength(password string) error {
+	err := passwordvalidator.Validate(password, minEntropyBits)
 
 	if err != nil {
 		return errors.New("password too weak")
 	}
 
 	return nil
+}
+
+func (p *passwordService) GenerateRandomToken() (string, error) {
+	bytes := make([]byte, 32)
+
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	token := hex.EncodeToString(bytes)
+
+	return token, nil
 }

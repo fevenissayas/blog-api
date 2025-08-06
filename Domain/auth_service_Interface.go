@@ -15,6 +15,7 @@ type IPasswordService interface {
 	Hash(password string) (string, error)
 	Compare(hashed, plain string) error
 	ValidateStrength(password string) error
+	GenerateRandomToken() (string,error) 
 }
 type RefreshTokenPayload struct {
 	TokenID   string

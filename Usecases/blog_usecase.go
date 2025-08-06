@@ -60,6 +60,10 @@ func (bu *BlogUsecase) Update(ctx context.Context, input domain.UpdateBlogInput)
 	return updatedBlog, nil
 }
 
+func (bu *BlogUsecase) FilterBlogs(ctx context.Context, tag string, date string, sort string) ([]domain.Blog, error) {
+	return bu.blogRepository.Filter(ctx, tag, date, sort)
+}
+
 func (bu *BlogUsecase) DeleteBlog(ctx context.Context, blogID, userID, userRole string) error {
 	blog, err := bu.blogRepository.FindByID(ctx, blogID)
 	if err != nil {
@@ -70,3 +74,4 @@ func (bu *BlogUsecase) DeleteBlog(ctx context.Context, blogID, userID, userRole 
 	}
 	return bu.blogRepository.DeleteBlog(ctx, blog)
 }
+

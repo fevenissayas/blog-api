@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type blogModel struct {
@@ -108,6 +109,50 @@ func (r *blogRepository) Update(ctx context.Context, blog *domain.Blog) (*domain
 	}
 
 	return blog, nil
+}
+
+func (r *blogRepository) Filter(ctx context.Context, tag string, date string, sort string) ([]domain.Blog, error) {
+	filter := bson.M{}
+
+	if tag != "" {
+		filter["tags"] = tag
+	}
+
+	if date != "" {
+		parsedDate, err := time.Parse("2006-01-02", date)
+		if err == nil {
+			start := parsedDate
+			end := parsedDate.Add(24 * time.Hour)
+			filter["createdAt"] = bson.M{
+				"$gte": start,
+				"$lt":  end,
+			}
+		}
+	}
+
+	findOptions := options.Find()
+	if sort == "popular" {
+		findOptions.SetSort(bson.D{{"view_count", -1}})
+	} else {
+		findOptions.SetSort(bson.D{{"createdAt", -1}})
+	}
+
+	cursor, err := r.blogCollection.Find(ctx, filter, findOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch blogs: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var results []blogModel
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, fmt.Errorf("failed to decode blogs: %w", err)
+	}
+
+	var blogs []domain.Blog
+	for _, b := range results {
+		blogs = append(blogs, toDomainBlog(b))
+	}
+	return blogs, nil
 }
 
 func (r *blogRepository) DeleteBlog(ctx context.Context, blog *domain.Blog) error {

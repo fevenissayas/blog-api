@@ -10,21 +10,25 @@ import (
 )
 
 type UserUsecase struct {
-	userRepository   domain.IUserRepository
-	refreshTokenRepo domain.IRefreshTokenRepository
-	JWTService       domain.IJWTService
-	passwordService  domain.IPasswordService
-	contextTimeout   time.Duration
+	userRepository         domain.IUserRepository
+	refreshTokenRepo       domain.IRefreshTokenRepository
+	passwordResetTokenRepo domain.IPasswordResetTokenRepository
+	JWTService             domain.IJWTService
+	emailService           domain.IEmailService
+	passwordService        domain.IPasswordService
+	contextTimeout         time.Duration
 }
 
-func NewUserUseCase(userRepo domain.IUserRepository, refreshRepo domain.IRefreshTokenRepository,
-	jwt domain.IJWTService, passwordService domain.IPasswordService, timeout time.Duration) domain.IUserUsecase {
+func NewUserUseCase(userRepo domain.IUserRepository, refreshRepo domain.IRefreshTokenRepository, resetTokenRepo domain.IPasswordResetTokenRepository,
+	jwt domain.IJWTService, passwordService domain.IPasswordService, emailService domain.IEmailService, timeout time.Duration) domain.IUserUsecase {
 	return &UserUsecase{
-		userRepository:   userRepo,
-		JWTService:       jwt,
-		refreshTokenRepo: refreshRepo,
-		passwordService:  passwordService,
-		contextTimeout:   timeout,
+		userRepository:         userRepo,
+		refreshTokenRepo:       refreshRepo,
+		passwordResetTokenRepo: resetTokenRepo,
+		JWTService:             jwt,
+		passwordService:        passwordService,
+		emailService:           emailService,
+		contextTimeout:         timeout,
 	}
 }
 
@@ -135,7 +139,6 @@ func (uc *UserUsecase) Login(ctx context.Context, user *domain.User) (*domain.To
 	}, nil
 }
 
-
 func (uc *UserUsecase) Logout(ctx context.Context, userID string) error {
 	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
 	defer cancel()
@@ -143,7 +146,7 @@ func (uc *UserUsecase) Logout(ctx context.Context, userID string) error {
 	if userID == "" {
 		return domain.ErrInvalidInput
 	}
-	
+
 	_, err := uc.userRepository.GetByID(ctx, userID)
 	if err != nil {
 		if err == domain.ErrUserNotFound {
@@ -160,15 +163,15 @@ func (uc *UserUsecase) Logout(ctx context.Context, userID string) error {
 
 	return nil
 }
-func (uc *UserUsecase) Promote (ctx context.Context, username string) error{
-	user,err := uc.userRepository.GetByUsername(ctx,username)
-	if err != nil{
+func (uc *UserUsecase) Promote(ctx context.Context, username string) error {
+	user, err := uc.userRepository.GetByUsername(ctx, username)
+	if err != nil {
 		return err
 	}
-	if user.Role == "admin"{
+	if user.Role == "admin" {
 		return errors.New("user is already an admin")
 	}
-    return uc.userRepository.Promote(ctx,user)
+	return uc.userRepository.Promote(ctx, user)
 }
 
 func (uc *UserUsecase) UpdateProfile(ctx context.Context, username string, bio, profilePicture, contactInfo string) error {
@@ -202,6 +205,85 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, username string, bio, 
 
 	user.UpdatedAt = time.Now()
 
-   
-   return uc.userRepository.Update(ctx, user)
+	return uc.userRepository.Update(ctx, user)
+}
+
+func (uc *UserUsecase) RequestPasswordReset(ctx context.Context, input domain.RequestPasswordResetInput) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
+	defer cancel()
+
+	if input.Email == "" {
+		return "", domain.ErrInvalidInput
+	}
+
+	user, err := uc.userRepository.GetByEmail(ctx, input.Email)
+	if err != nil {
+		return "", fmt.Errorf("user not found: %w", err)
+	}
+
+	rawToken, err := uc.passwordService.GenerateRandomToken()
+
+	if err != nil {
+		return "", fmt.Errorf("Error: %w", err)
+	}
+
+	hashedToken, err := uc.passwordService.Hash(rawToken)
+	if err != nil {
+		return "", err
+	}
+
+	resetToken := &domain.PasswordResetToken{
+		UserID:    user.ID,
+		TokenHash: hashedToken,
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+		CreatedAt: time.Now(),
+		Used:      false,
+	}
+
+	err = uc.passwordResetTokenRepo.Store(ctx, resetToken)
+	if err != nil {
+		return "", fmt.Errorf("failed to store reset token: %w", err)
+	}
+
+	err = uc.emailService.SendPasswordResetEmail(ctx, user.Email, rawToken)
+	if err != nil {
+		return "", fmt.Errorf("failed to send email: %w", err)
+	}
+
+	return rawToken, nil 
+}
+
+func (uc *UserUsecase) ResetPassword(ctx context.Context, input domain.ResetPasswordInput) error {
+	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
+	defer cancel()
+
+	if input.Token == "" || input.NewPassword == "" {
+		return domain.ErrInvalidInput
+	}
+
+	tokenRecord, err := uc.passwordResetTokenRepo.GetByTokenHash(ctx, input.Token)
+	if err != nil {
+		return fmt.Errorf("invalid or expired token: %w", err)
+	}
+
+	if err := uc.passwordService.ValidateStrength(input.NewPassword); err != nil {
+		return fmt.Errorf("password validation failed: %w", err)
+	}
+
+	hashedPassword, err := uc.passwordService.Hash(input.NewPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash new password: %w", err)
+	}
+
+	err = uc.userRepository.UpdatePassword(ctx, tokenRecord.UserID, hashedPassword)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	err = uc.passwordResetTokenRepo.MarkUsed(ctx, tokenRecord.ID)
+	if err != nil {
+		return fmt.Errorf("failed to mark token used: %w", err)
+	}
+
+	return nil
 }
