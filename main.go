@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-	"strconv"
 	"time"
 
 	controllers "blog-api/Delivery/Controllers"
@@ -23,10 +21,9 @@ func main() {
 	passwordService := infrastructure.NewPasswordService()
 	authMiddleware := infrastructure.NewAuthMiddleware(jwtService)
 
-	smtpPort, err := strconv.Atoi(infrastructure.Env.EMAIL_PORT)
-if err != nil {
-	log.Fatalf("Invalid EMAIL_PORT: %v", err)
-}
+	
+	smtpPort := infrastructure.ParsePort(infrastructure.Env.EMAIL_PORT, 465)
+
 
 	emailService := infrastructure.NewSMTPEmailService(
 		infrastructure.Env.EMAIL_FROM,

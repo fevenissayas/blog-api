@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
+	"strconv"
 	"text/template"
 
 	domain "blog-api/Domain"
@@ -61,4 +63,17 @@ func (s *SMTPEmailService) SendPasswordResetEmail(ctx context.Context, toEmail s
 	}
 
 	return nil
+}
+
+
+func ParsePort(portStr string, defaultPort int) int {
+	if portStr == "" {
+		return defaultPort
+	}
+	p, err := strconv.Atoi(portStr)
+	if err != nil {
+		log.Printf("Warning: invalid port '%s', defaulting to %d\n", portStr, defaultPort)
+		return defaultPort
+	}
+	return p
 }
