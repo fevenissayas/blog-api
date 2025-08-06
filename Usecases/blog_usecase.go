@@ -75,3 +75,6 @@ func (bu *BlogUsecase) DeleteBlog(ctx context.Context, blogID, userID, userRole 
 	return bu.blogRepository.DeleteBlog(ctx, blog)
 }
 
+func (s *BlogUsecase) SearchBlogs(ctx context.Context, tag, date, sort, title, userID string) ([]domain.Blog, error) {
+    return s.blogRepository.SearchBlogs(ctx, tag, date, sort, title, userID)
+}
