@@ -23,12 +23,14 @@ type IBlogRepository interface {
 	DeleteBlog(ctx context.Context, blog *Blog) error
 	Update(ctx context.Context, blog *Blog) (*Blog, error)
 	Filter(ctx context.Context, tag string, date string, sort string) ([]Blog, error)
+	SearchBlogs(ctx context.Context, tag, date, sort, title, userID string) ([]Blog, error)
 }
 type IBlogUsecase interface {
 	Create(ctx context.Context, blog *Blog) error
 	Update(ctx context.Context, input UpdateBlogInput) (*Blog, error)
 	DeleteBlog(ctx context.Context, blogID, userID, userRole string) error
 	FilterBlogs(ctx context.Context, tag string, date string, sort string) ([]Blog, error)
+	SearchBlogs(ctx context.Context, tag, date, sort, title, userID string) ([]Blog, error)
 	// Search(ctx context.Context, blogid string) error
 	// Filtration(ctx context.Context) error
 	// PopulatityTracking(ctx context.Context) error
