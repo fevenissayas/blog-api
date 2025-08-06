@@ -118,3 +118,18 @@ func (bc *BlogController) DeleteBlog(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Blog deleted successfully"})
 
 }
+
+func (h *BlogController) SearchBlogs(c *gin.Context) {
+    tag := c.Query("tag")
+    date := c.Query("date")
+    sort := c.Query("sort")
+    title := c.Query("title")
+    userID := c.Query("userID")
+
+    blogs, err := h.blogUsecase.SearchBlogs(c.Request.Context(), tag, date, sort, title, userID)
+    if err != nil {
+        c.JSON(500, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(200, blogs)
+}

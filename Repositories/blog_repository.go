@@ -132,9 +132,9 @@ func (r *blogRepository) Filter(ctx context.Context, tag string, date string, so
 
 	findOptions := options.Find()
 	if sort == "popular" {
-		findOptions.SetSort(bson.D{{"view_count", -1}})
+		findOptions.SetSort(bson.D{{Key: "view_count", Value: -1}})
 	} else {
-		findOptions.SetSort(bson.D{{"createdAt", -1}})
+		findOptions.SetSort(bson.D{{Key: "createdAt", Value: -1}})
 	}
 
 	cursor, err := r.blogCollection.Find(ctx, filter, findOptions)
@@ -165,4 +165,54 @@ func (r *blogRepository) DeleteBlog(ctx context.Context, blog *domain.Blog) erro
 		return fmt.Errorf("failed to delete blog: %w", err)
 	}
 	return nil
+}
+
+func (r *blogRepository) SearchBlogs(ctx context.Context, tag, date, sort, title, userID string) ([]domain.Blog, error) {
+    var andFilters []bson.M
+
+    if tag != "" {
+        andFilters = append(andFilters, bson.M{"tags": tag})
+    }
+    if title != "" {
+        andFilters = append(andFilters, bson.M{"title": bson.M{"$regex": title, "$options": "i"}})
+    }
+    if userID != "" {
+        andFilters = append(andFilters, bson.M{"user_id": userID})
+    }
+    if date != "" {
+        if parsedDate, err := time.Parse("2006-01-02", date); err == nil {
+            start := parsedDate
+            end := parsedDate.Add(24 * time.Hour)
+            andFilters = append(andFilters, bson.M{"createdAt": bson.M{"$gte": start, "$lt": end}})
+        }
+    }
+
+    filter := bson.M{}
+    if len(andFilters) > 0 {
+        filter["$and"] = andFilters
+    }
+
+    findOptions := options.Find()
+    if sort == "popular" {
+        findOptions.SetSort(bson.D{{Key: "view_count", Value: -1}})
+    } else {
+        findOptions.SetSort(bson.D{{Key: "createdAt", Value: -1}})
+    }
+
+    cursor, err := r.blogCollection.Find(ctx, filter, findOptions)
+    if err != nil {
+        return nil, fmt.Errorf("failed to fetch blogs: %w", err)
+    }
+    defer cursor.Close(ctx)
+
+    var results []blogModel
+    if err := cursor.All(ctx, &results); err != nil {
+        return nil, fmt.Errorf("failed to decode blogs: %w", err)
+    }
+
+    var blogs []domain.Blog
+    for _, b := range results {
+        blogs = append(blogs, toDomainBlog(b))
+    }
+    return blogs, nil
 }
