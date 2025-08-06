@@ -20,13 +20,13 @@ type IBlogRepository interface {
 	Create(ctx context.Context, blog *Blog) (*Blog, error)
 	FindByID(ctx context.Context, BlogID string) (*Blog, error)
 	// GetByUser(ctx context.Context, user *User) (*Blog, error)
-	// Delete(ctx context.Context, blog *Blog) (error)
+	DeleteBlog(ctx context.Context, blog *Blog) error
 	Update(ctx context.Context, blog *Blog) (*Blog, error)
 }
 type IBlogUsecase interface {
 	Create(ctx context.Context, blog *Blog) error
-	// Delete(ctx context.Context, blog *Blog) error
 	Update(ctx context.Context, input UpdateBlogInput) (*Blog, error)
+	DeleteBlog(ctx context.Context, blogID, userID, userRole string) error
 	// Search(ctx context.Context, blogid string) error
 	// Filtration(ctx context.Context) error
 	// PopulatityTracking(ctx context.Context) error
