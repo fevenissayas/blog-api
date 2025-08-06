@@ -89,3 +89,17 @@ func (bc *BlogController) UpdateBlogHandler(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, updatedBlog)
 }
+
+func (bc *BlogController) FilterBlogsHandler(ctx *gin.Context) {
+	tag := ctx.Query("tag")
+	date := ctx.Query("date")
+	sort := ctx.DefaultQuery("sort", "recent")
+
+	blogs, err := bc.blogUsecase.FilterBlogs(ctx.Request.Context(), tag, date, sort)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, blogs)
+}

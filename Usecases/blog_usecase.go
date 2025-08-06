@@ -59,3 +59,7 @@ func (bu *BlogUsecase) Update(ctx context.Context, input domain.UpdateBlogInput)
 
 	return updatedBlog, nil
 }
+
+func (bu *BlogUsecase) FilterBlogs(ctx context.Context, tag string, date string, sort string) ([]domain.Blog, error) {
+	return bu.blogRepository.Filter(ctx, tag, date, sort)
+}
