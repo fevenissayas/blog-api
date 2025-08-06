@@ -12,3 +12,11 @@ type UpdateBlogInput struct {
 	Content string
 	Tags    []string
 }
+type RequestPasswordResetInput struct {
+	Email string
+}
+
+type ResetPasswordInput struct {
+	Token       string
+	NewPassword string
+}

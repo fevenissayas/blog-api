@@ -170,3 +170,13 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	}
 	return nil
 }
+
+func (r *userRepository) UpdatePassword(ctx context.Context, userID string, hashedPassword string) error {
+	objID, _ := primitive.ObjectIDFromHex(userID)
+	_, err := r.userCollection.UpdateOne(
+		ctx,
+		bson.M{"_id": objID},
+		bson.M{"$set": bson.M{"password": hashedPassword}},
+	)
+	return err
+}
