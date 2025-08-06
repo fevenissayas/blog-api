@@ -35,6 +35,8 @@ type IUserRepository interface {
 	ExistsByUsername(ctx context.Context, username string) (bool, error)
 	Promote(ctx context.Context, user *User)(error)
 	Update(ctx context.Context, user *User) error
+	UpdatePassword(ctx context.Context, userID string, hashedPassword string) error
+
 }
 type IUserUsecase interface {
 	Register(ctx context.Context, user *User) error
@@ -42,4 +44,6 @@ type IUserUsecase interface {
 	Promote(ctx context.Context, username string) error
 	Logout(ctx context.Context, userID string) error
 	UpdateProfile(ctx context.Context, username, bio, profilePicture, contactInfo string) error
+	RequestPasswordReset(ctx context.Context, input RequestPasswordResetInput) (token string, err error)
+	ResetPassword(ctx context.Context, input ResetPasswordInput) error
 }

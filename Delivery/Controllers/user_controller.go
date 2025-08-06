@@ -38,6 +38,14 @@ type UpdateProfileRequest struct {
 	ProfilePicture string `json:"profile_picture"`
 	ContactInfo    string `json:"contact_info"`
 }
+type RequestPasswordResetRequest struct {
+	Email string `json:"email"`
+}
+
+type ResetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"new_password"`
+}
 
 func (c *UserController) RegisterHandler(ctx *gin.Context) {
 	var req RegisterRequest
@@ -56,7 +64,6 @@ func (c *UserController) RegisterHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid email format"})
 		return
 	}
-	//convert DTO to domain.User
 	user := &domain.User{
 		Username:       req.Username,
 		Email:          req.Email,
@@ -155,4 +162,43 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "Profile updated successfully"})
+}
+
+func (c *UserController) ResetPasswordHandler(ctx *gin.Context) {
+	var req ResetPasswordRequest
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	err := c.userUsecase.ResetPassword(ctx, domain.ResetPasswordInput{
+		Token:       req.Token,
+		NewPassword: req.NewPassword,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
+}
+
+func (c *UserController) RequestPasswordResetHandler(ctx *gin.Context) {
+	var req RequestPasswordResetRequest
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	_, err := c.userUsecase.RequestPasswordReset(ctx, domain.RequestPasswordResetInput{
+		Email: req.Email,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Password reset email sent"})
 }

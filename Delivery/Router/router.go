@@ -20,6 +20,9 @@ func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController,
 		authRoutes.POST("/update", authMiddleware.Middleware(), uc.UpdateProfile)
 	}
 
+	router.POST("/password/request-reset", uc.RequestPasswordResetHandler)
+	router.POST("/password/reset", uc.ResetPasswordHandler)
+
 	blogRoutes := router.Group("/blogs")
 	{
 		blogRoutes.POST("/",authMiddleware.Middleware(),bc.CreateBlogHandler)
