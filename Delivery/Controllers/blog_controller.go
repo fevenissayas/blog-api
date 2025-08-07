@@ -20,6 +20,24 @@ type updateBlogRequest struct {
 	Tags    []string `json:"tags"`
 }
 
+type GetBlogsRequest struct {
+    Page     int    `form:"page" binding:"min=1"`
+    Limit    int    `form:"limit" binding:"min=1,max=100"`
+    Sort     string `form:"sort"` // "recent", "popular", "views"
+    AuthorID string `form:"author_id"`
+}
+
+type PaginatedBlogsResponse struct {
+    Blogs      []domain.Blog `json:"blogs"`
+    Page       int           `json:"page"`
+    Limit      int           `json:"limit"`
+    Total      int64         `json:"total"`
+    TotalPages int           `json:"total_pages"`
+    HasNext    bool          `json:"has_next"`
+    HasPrev    bool          `json:"has_prev"`
+}
+
+
 type BlogController struct {
 	blogUsecase domain.IBlogUsecase
 }
@@ -149,4 +167,41 @@ func (bc *BlogController) AiSuggestion(ctx *gin.Context){
 	   return
    }
    ctx.IndentedJSON(http.StatusOK, gin.H{"Suggestion":text})
+}
+
+
+// handler for getting paginated blogs
+func (bc *BlogController) GetBlogsHandler(ctx *gin.Context) {
+    var req GetBlogsRequest
+    
+    // Set defaults
+    req.Page = 1
+    req.Limit = 10
+    req.Sort = "recent"
+    
+    if err := ctx.ShouldBindQuery(&req); err != nil {
+        ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid query parameters"})
+        return
+    }
+
+    result, err := bc.blogUsecase.GetBlogs(ctx.Request.Context(), req.Page, req.Limit, req.Sort, req.AuthorID)
+    if err != nil {
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    ctx.JSON(http.StatusOK, result)
+}
+
+// Handler for getting single blog (with view increment)
+func (bc *BlogController) GetBlogByIDHandler(ctx *gin.Context) {
+    blogID := ctx.Param("id")
+    
+    blog, err := bc.blogUsecase.GetByIDAndIncrementViews(ctx.Request.Context(), blogID)
+    if err != nil {
+        ctx.JSON(http.StatusNotFound, gin.H{"error": "Blog not found"})
+        return
+    }
+    
+    ctx.JSON(http.StatusOK, blog)
 }
