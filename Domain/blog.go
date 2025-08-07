@@ -24,6 +24,8 @@ type IBlogRepository interface {
 	Update(ctx context.Context, blog *Blog) (*Blog, error)
 	Filter(ctx context.Context, tag string, date string, sort string) ([]Blog, error)
 	SearchBlogs(ctx context.Context, tag, date, sort, title, userID string) ([]Blog, error)
+	GetPaginated(ctx context.Context, page, limit int, sort, authorID string) ([]Blog, int64, error)
+    IncrementViewCount(ctx context.Context, blogID string) error
 }
 type IBlogUsecase interface {
 	Create(ctx context.Context, blog *Blog) error
@@ -32,6 +34,8 @@ type IBlogUsecase interface {
 	FilterBlogs(ctx context.Context, tag string, date string, sort string) ([]Blog, error)
 	SearchBlogs(ctx context.Context, tag, date, sort, title, userID string) ([]Blog, error)
 	GetSuggestion(req AiSuggestionRequest)(string, error)
+	GetBlogs(ctx context.Context, page, limit int, sort, authorID string) (*PaginatedBlogsResponse, error)
+    GetByIDAndIncrementViews(ctx context.Context, blogID string) (*Blog, error)
 	// Search(ctx context.Context, blogid string) error
 	// Filtration(ctx context.Context) error
 	// PopulatityTracking(ctx context.Context) error
