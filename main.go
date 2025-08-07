@@ -37,16 +37,21 @@ func main() {
 	refreshRepository := repositories.NewRefreshTokenRepository(db)
 	blogRepository := repositories.NewBlogRepository(db)
 	resetPasswordRepo := repositories.NewPasswordResetTokenRepo(db)
+	likeRepo :=repositories.NewLikeRepository(db)
+
     Aiservice:= infrastructure.NewAiService()
+
 	userUsecase := usecases.NewUserUseCase(userRepository, refreshRepository, resetPasswordRepo, jwtService, passwordService, emailService, 3*time.Second)
 	authUsecase := usecases.NewAuthUsecase(jwtService, userRepository, refreshRepository, 3*time.Second)
 	blogUsecase := usecases.NewBlogUseCase(blogRepository,Aiservice)
+	likeUsecase := usecases.NewLikeUsecase(likeRepo)
 
 	userController := controllers.NewUserController(userUsecase)
 	authController := controllers.NewAuthController(authUsecase)
 	blogController := controllers.NewBlogController(blogUsecase)
+	likeController := controllers.NewLikeController(likeUsecase)
 
-	r := router.SetupRouter(userController, authController, blogController, authMiddleware)
+	r := router.SetupRouter(userController, authController, blogController, likeController,authMiddleware)
 
 	port := infrastructure.Env.PORT
 	if port == "" {
