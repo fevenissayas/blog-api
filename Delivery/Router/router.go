@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController, bc *controllers.BlogController, authMiddleware *infrastructure.AuthMiddleware) *gin.Engine {
+func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController, bc *controllers.BlogController,likeCtrl *controllers.LikeController ,authMiddleware *infrastructure.AuthMiddleware) *gin.Engine {
 	router := gin.Default()
 
 	authRoutes := router.Group("/auth")
@@ -31,6 +31,14 @@ func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController,
 		blogRoutes.GET("/filter", authMiddleware.Middleware(), bc.FilterBlogsHandler)
 		blogRoutes.POST("/aisuggestion", authMiddleware.Middleware(), bc.AiSuggestion)
 		router.GET("/blogs/search", authMiddleware.Middleware(),bc.SearchBlogs)
+
+		likes := blogRoutes.Group("/:id/likes",authMiddleware.Middleware())
+		{
+			likes.POST("/", likeCtrl.LikeBlogHandler)
+			likes.DELETE("/", likeCtrl.UnlikeBlogHandler)
+			likes.GET("/", likeCtrl.GetLikeCountHandler)
+			likes.GET("/is-liked", likeCtrl.IsBlogLikedHandler)
+		}
 	}
 
 	return router
