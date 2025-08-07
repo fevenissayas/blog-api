@@ -83,3 +83,51 @@ func (bu *BlogUsecase) SearchBlogs(ctx context.Context, tag, date, sort, title, 
 func (bu *BlogUsecase) GetSuggestion(req domain.AiSuggestionRequest)(string , error){
 	return bu.aiService.Getsuggestion(req)
 }
+
+func (bu *BlogUsecase) GetBlogs(ctx context.Context, page, limit int, sort, authorID string) (*domain.PaginatedBlogsResponse, error) {
+    if page < 1 {
+        page = 1
+    }
+    if limit < 1 || limit > 100 {
+        limit = 10
+    }
+
+    blogs, total, err := bu.blogRepository.GetPaginated(ctx, page, limit, sort, authorID)
+    if err != nil {
+        return nil, fmt.Errorf("failed to get blogs: %w", err)
+    }
+
+    totalPages := int((total + int64(limit) - 1) / int64(limit)) // Ceiling division
+    
+    response := &domain.PaginatedBlogsResponse{
+        Blogs:      blogs,
+        Page:       page,
+        Limit:      limit,
+        Total:      total,
+        TotalPages: totalPages,
+        HasNext:    page < totalPages,
+        HasPrev:    page > 1,
+    }
+
+    return response, nil
+}
+
+func (bu *BlogUsecase) GetByIDAndIncrementViews(ctx context.Context, blogID string) (*domain.Blog, error) {
+    // First get the blog
+    blog, err := bu.blogRepository.FindByID(ctx, blogID)
+    if err != nil {
+        return nil, fmt.Errorf("blog not found: %w", err)
+    }
+
+    // Increment view count
+    err = bu.blogRepository.IncrementViewCount(ctx, blogID)
+    if err != nil {
+        // Log error but don't fail the request
+        fmt.Printf("Warning: failed to increment view count for blog %s: %v\n", blogID, err)
+    } else {
+        // Update the blog object with incremented count
+        blog.ViewCount++
+    }
+
+    return blog, nil
+}
