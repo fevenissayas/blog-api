@@ -216,3 +216,71 @@ func (r *blogRepository) SearchBlogs(ctx context.Context, tag, date, sort, title
     }
     return blogs, nil
 }
+
+func (r *blogRepository) GetPaginated(ctx context.Context, page, limit int, sort, authorID string) ([]domain.Blog, int64, error) {
+    filter := bson.M{}
+    
+    if authorID != "" {
+        filter["user_id"] = authorID
+    }
+
+    // Count total documents
+    total, err := r.blogCollection.CountDocuments(ctx, filter)
+    if err != nil {
+        return nil, 0, fmt.Errorf("failed to count blogs: %w", err)
+    }
+
+    // Calculate skip
+    skip := (page - 1) * limit
+
+    // Set sort options
+    findOptions := options.Find()
+    findOptions.SetSkip(int64(skip))
+    findOptions.SetLimit(int64(limit))
+    
+    switch sort {
+    case "popular", "views":
+        findOptions.SetSort(bson.D{{Key: "view_count", Value: -1}})
+    case "recent":
+        findOptions.SetSort(bson.D{{Key: "createdAt", Value: -1}})
+    default:
+        findOptions.SetSort(bson.D{{Key: "createdAt", Value: -1}})
+    }
+
+    cursor, err := r.blogCollection.Find(ctx, filter, findOptions)
+    if err != nil {
+        return nil, 0, fmt.Errorf("failed to fetch blogs: %w", err)
+    }
+    defer cursor.Close(ctx)
+
+    var results []blogModel
+    if err := cursor.All(ctx, &results); err != nil {
+        return nil, 0, fmt.Errorf("failed to decode blogs: %w", err)
+    }
+
+    var blogs []domain.Blog
+    for _, b := range results {
+        blogs = append(blogs, toDomainBlog(b))
+    }
+    
+    return blogs, total, nil
+}
+
+func (r *blogRepository) IncrementViewCount(ctx context.Context, blogID string) error {
+    objID, err := primitive.ObjectIDFromHex(blogID)
+    if err != nil {
+        return fmt.Errorf("invalid blog ID: %w", err)
+    }
+
+    update := bson.M{
+        "$inc": bson.M{"view_count": 1},
+        "$set": bson.M{"updatedAt": time.Now()},
+    }
+
+    _, err = r.blogCollection.UpdateByID(ctx, objID, update)
+    if err != nil {
+        return fmt.Errorf("failed to increment view count: %w", err)
+    }
+
+    return nil
+}
