@@ -23,7 +23,6 @@ type updateBlogRequest struct {
 type BlogController struct {
 	blogUsecase domain.IBlogUsecase
 }
-
 func NewBlogController(blogUsecase domain.IBlogUsecase) *BlogController {
 	return &BlogController{blogUsecase: blogUsecase}
 }
@@ -119,17 +118,35 @@ func (bc *BlogController) DeleteBlog(ctx *gin.Context) {
 
 }
 
-func (h *BlogController) SearchBlogs(c *gin.Context) {
-    tag := c.Query("tag")
-    date := c.Query("date")
-    sort := c.Query("sort")
-    title := c.Query("title")
-    userID := c.Query("userID")
+func (bc *BlogController) SearchBlogs(ctx *gin.Context) {
+    tag := ctx.Query("tag")
+    date := ctx.Query("date")
+    sort := ctx.Query("sort")
+    title := ctx.Query("title")
+    userID := ctx.Query("userID")
 
-    blogs, err := h.blogUsecase.SearchBlogs(c.Request.Context(), tag, date, sort, title, userID)
+    blogs, err := bc.blogUsecase.SearchBlogs(ctx.Request.Context(), tag, date, sort, title, userID)
     if err != nil {
-        c.JSON(500, gin.H{"error": err.Error()})
+        ctx.JSON(500, gin.H{"error": err.Error()})
         return
     }
-    c.JSON(200, blogs)
+    ctx.JSON(200, blogs)
+}
+func (bc *BlogController) AiSuggestion(ctx *gin.Context){
+   var req updateBlogRequest
+   if err := ctx.ShouldBindJSON(&req); err != nil{
+	   ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error":"invalid request"})
+	   return
+   }
+   input := domain.AiSuggestionRequest{
+	   Title: req.Title,
+	   Content: req.Content,
+	   Tags: req.Tags,
+   }
+   text, err := bc.blogUsecase.GetSuggestion(input)
+   if err != nil {
+	   ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error":err.Error()})
+	   return
+   }
+   ctx.IndentedJSON(http.StatusOK, gin.H{"Suggestion":text})
 }

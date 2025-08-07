@@ -9,11 +9,13 @@ import (
 
 type BlogUsecase struct {
 	blogRepository domain.IBlogRepository
+	aiService domain.AiService
 }
 
-func NewBlogUseCase(blogRepo domain.IBlogRepository) domain.IBlogUsecase {
+func NewBlogUseCase(blogRepo domain.IBlogRepository, aiservice domain.AiService) domain.IBlogUsecase {
 	return &BlogUsecase{
 		blogRepository: blogRepo,
+		aiService: aiservice,
 	}
 }
 
@@ -75,6 +77,9 @@ func (bu *BlogUsecase) DeleteBlog(ctx context.Context, blogID, userID, userRole 
 	return bu.blogRepository.DeleteBlog(ctx, blog)
 }
 
-func (s *BlogUsecase) SearchBlogs(ctx context.Context, tag, date, sort, title, userID string) ([]domain.Blog, error) {
-    return s.blogRepository.SearchBlogs(ctx, tag, date, sort, title, userID)
+func (bu *BlogUsecase) SearchBlogs(ctx context.Context, tag, date, sort, title, userID string) ([]domain.Blog, error) {
+    return bu.blogRepository.SearchBlogs(ctx, tag, date, sort, title, userID)
+}
+func (bu *BlogUsecase) GetSuggestion(req domain.AiSuggestionRequest)(string , error){
+	return bu.aiService.Getsuggestion(req)
 }

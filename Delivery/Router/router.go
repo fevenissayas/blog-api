@@ -29,6 +29,7 @@ func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController,
 		blogRoutes.PUT("/:id",authMiddleware.Middleware(),bc.UpdateBlogHandler)
 		blogRoutes.DELETE("/:id",authMiddleware.Middleware(),bc.DeleteBlog)
 		blogRoutes.GET("/filter", authMiddleware.Middleware(), bc.FilterBlogsHandler)
+		blogRoutes.POST("/aisuggestion", authMiddleware.Middleware(), bc.AiSuggestion)
 		router.GET("/blogs/search", authMiddleware.Middleware(),bc.SearchBlogs)
 	}
 

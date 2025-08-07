@@ -31,6 +31,7 @@ type IBlogUsecase interface {
 	DeleteBlog(ctx context.Context, blogID, userID, userRole string) error
 	FilterBlogs(ctx context.Context, tag string, date string, sort string) ([]Blog, error)
 	SearchBlogs(ctx context.Context, tag, date, sort, title, userID string) ([]Blog, error)
+	GetSuggestion(req AiSuggestionRequest)(string, error)
 	// Search(ctx context.Context, blogid string) error
 	// Filtration(ctx context.Context) error
 	// PopulatityTracking(ctx context.Context) error

@@ -17,6 +17,7 @@ type EnvStruct struct {
 	EMAIL_HOST     string
 	EMAIL_USERNAME string
 	EMAIL_PASSWORD string
+	API_Key        string
 }
 
 var Env EnvStruct
@@ -37,6 +38,7 @@ func LoadEnv() {
 		EMAIL_PORT:     os.Getenv("EMAIL_PORT"),
 		EMAIL_USERNAME: os.Getenv("EMAIL_USERNAME"),
 		EMAIL_PASSWORD: os.Getenv("EMAIL_PASSWORD"),
+		API_Key:        os.Getenv("API_Key"),
 	}
 
 	if Env.MONGODB_URI == "" || Env.JWT_SECRET == "" || Env.DB_NAME == "" {

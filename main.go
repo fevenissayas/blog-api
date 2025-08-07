@@ -37,10 +37,10 @@ func main() {
 	refreshRepository := repositories.NewRefreshTokenRepository(db)
 	blogRepository := repositories.NewBlogRepository(db)
 	resetPasswordRepo := repositories.NewPasswordResetTokenRepo(db)
-
+    Aiservice:= infrastructure.NewAiService()
 	userUsecase := usecases.NewUserUseCase(userRepository, refreshRepository, resetPasswordRepo, jwtService, passwordService, emailService, 3*time.Second)
 	authUsecase := usecases.NewAuthUsecase(jwtService, userRepository, refreshRepository, 3*time.Second)
-	blogUsecase := usecases.NewBlogUseCase(blogRepository)
+	blogUsecase := usecases.NewBlogUseCase(blogRepository,Aiservice)
 
 	userController := controllers.NewUserController(userUsecase)
 	authController := controllers.NewAuthController(authUsecase)
