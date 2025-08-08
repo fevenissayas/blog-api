@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController, bc *controllers.BlogController,likeCtrl *controllers.LikeController ,authMiddleware *infrastructure.AuthMiddleware) *gin.Engine {
+func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController, bc *controllers.BlogController,likeCtrl *controllers.LikeController ,authMiddleware *infrastructure.AuthMiddleware, commentsController *controllers.CommentController) *gin.Engine {
 	router := gin.Default()
 
 	authRoutes := router.Group("/auth")
@@ -25,8 +25,8 @@ func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController,
 
 	blogRoutes := router.Group("/blogs")
 	{
-        blogRoutes.GET("/", bc.GetBlogsHandler)           // Get paginated blogs
-        blogRoutes.GET("/:id", bc.GetBlogByIDHandler)     // Get single blog
+		blogRoutes.GET("/", bc.GetBlogsHandler)           // Get paginated blogs
+		blogRoutes.GET("/:id", bc.GetBlogByIDHandler)     // Get single blog
 
 		blogRoutes.POST("/",authMiddleware.Middleware(),bc.CreateBlogHandler)
 		blogRoutes.PUT("/:id",authMiddleware.Middleware(),bc.UpdateBlogHandler)
@@ -42,6 +42,14 @@ func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController,
 			likes.GET("/", likeCtrl.GetLikeCountHandler)
 			likes.GET("/is-liked", likeCtrl.IsBlogLikedHandler)
 		}
+
+		// Comment endpoints
+		comments := blogRoutes.Group(":blogID/comments", authMiddleware.Middleware())
+		{
+			comments.POST("/", commentsController.CreateComment)
+			comments.GET("/", commentsController.GetComments)
+		}
+		router.DELETE("/comments/:commentID", authMiddleware.Middleware(), commentsController.DeleteComment)
 	}
 
 	return router
