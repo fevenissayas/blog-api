@@ -33,13 +33,15 @@ type IUserRepository interface {
 	GetByUsername(ctx context.Context, username string) (*User, error)
 	GetByID(ctx context.Context, id string) (*User, error)
 	ExistsByUsername(ctx context.Context, username string) (bool, error)
-	Promote(ctx context.Context, user *User)(error)
+	Promote(ctx context.Context, user *User) error
 	Update(ctx context.Context, user *User) error
 	UpdatePassword(ctx context.Context, userID string, hashedPassword string) error
-
+	VerifyUser(ctx context.Context, userID string) error
 }
+
 type IUserUsecase interface {
 	Register(ctx context.Context, user *User) error
+	VerifyEmail(ctx context.Context, input VerifyEmailInput) error
 	Login(ctx context.Context, user *User) (*TokenResponse, error)
 	Promote(ctx context.Context, username string) error
 	Logout(ctx context.Context, userID string) error
