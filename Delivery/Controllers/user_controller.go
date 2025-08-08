@@ -18,18 +18,26 @@ func NewUserController(userUsecase domain.IUserUsecase) *UserController {
 }
 
 type RegisterRequest struct {
-	Username       string `json:"username"`
-	Email          string `json:"email"`
-	Password       string `json:"password"`
-	Bio            string `json:"bio"`             //optional
-	ProfilePicture string `json:"profile_picture"` //optional
-	ContactInfo    string `json:"contact_info"`    //optional
+	Username       string      `json:"username"`
+	Email          string      `json:"email"`
+	Password       string      `json:"password"`
+	Bio            string      `json:"bio"`             //optional
+	ProfilePicture string      `json:"profile_picture"` //optional
+	ContactInfo    string      `json:"contact_info"`    //optional
+	Role           domain.Role `json:"role,omitempty"`  // For admin registration
 }
+
+type VerifyEmailRequest struct {
+	Email string `json:"email"`
+	OTP   string `json:"otp"`
+}
+
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
-type PromotionRequest struct{
+
+type PromotionRequest struct {
 	Username string `json:"username"`
 }
 
@@ -38,6 +46,7 @@ type UpdateProfileRequest struct {
 	ProfilePicture string `json:"profile_picture"`
 	ContactInfo    string `json:"contact_info"`
 }
+
 type RequestPasswordResetRequest struct {
 	Email string `json:"email"`
 }
@@ -64,6 +73,19 @@ func (c *UserController) RegisterHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid email format"})
 		return
 	}
+
+	// Determine role - default to user unless specifically admin role is requested
+	role := domain.RoleUser
+	if req.Role == domain.RoleAdmin {
+		// Check if current user is admin (for admin registration by existing admin)
+		currentUserRole := ctx.GetString("role")
+		if currentUserRole != string(domain.RoleAdmin) {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Only admins can create admin accounts"})
+			return
+		}
+		role = domain.RoleAdmin
+	}
+
 	user := &domain.User{
 		Username:       req.Username,
 		Email:          req.Email,
@@ -71,7 +93,7 @@ func (c *UserController) RegisterHandler(ctx *gin.Context) {
 		Bio:            req.Bio,
 		ProfilePicture: req.ProfilePicture,
 		ContactInfo:    req.ContactInfo,
-		Role:           domain.RoleUser,
+		Role:           role,
 		IsVerified:     false,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
@@ -82,7 +104,36 @@ func (c *UserController) RegisterHandler(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
+	ctx.JSON(http.StatusCreated, gin.H{
+		"message": "User registered successfully. Please check your email for verification code.",
+		"email":   req.Email,
+	})
+}
+
+func (c *UserController) VerifyEmailHandler(ctx *gin.Context) {
+	var req VerifyEmailRequest
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON body"})
+		return
+	}
+
+	if req.Email == "" || req.OTP == "" {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Email and OTP are required"})
+		return
+	}
+
+	input := domain.VerifyEmailInput{
+		Email: req.Email,
+		OTP:   req.OTP,
+	}
+
+	if err := c.userUsecase.VerifyEmail(ctx, input); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Email verified successfully. You can now login."})
 }
 
 func (c *UserController) LoginHandler(ctx *gin.Context) {
@@ -94,9 +145,10 @@ func (c *UserController) LoginHandler(ctx *gin.Context) {
 	}
 
 	if req.Email == "" || req.Password == "" {
-			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": domain.ErrInvalidInput.Error()})
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": domain.ErrInvalidInput.Error()})
 		return
 	}
+
 	user := &domain.User{
 		Email:    req.Email,
 		Password: req.Password,
@@ -108,9 +160,20 @@ func (c *UserController) LoginHandler(ctx *gin.Context) {
 		return
 	}
 
+	// Set refresh token as HTTP-only cookie
+	ctx.SetCookie(
+		"refresh_token",           // name
+		tokens.RefreshToken,       // value
+		7*24*60*60,               // maxAge (7 days in seconds)
+		"/",                      // path
+		"",                       // domain (empty means current domain)
+		false,                    // secure (set to true in production with HTTPS)
+		true,                     // httpOnly
+	)
+
 	ctx.JSON(http.StatusOK, gin.H{
-		"access_token":  tokens.AccessToken,
-		"refresh_token": tokens.RefreshToken,
+		"access_token": tokens.AccessToken,
+		"message":      "Login successful",
 	})
 }
 
@@ -120,6 +183,17 @@ func (c *UserController) LogoutHandler(ctx *gin.Context) {
 		return
 	}
 
+	// Clear the refresh token cookie
+	ctx.SetCookie(
+		"refresh_token", // name
+		"",              // value (empty to clear)
+		-1,              // maxAge (negative to expire immediately)
+		"/",             // path
+		"",              // domain
+		false,           // secure
+		true,            // httpOnly
+	)
+
 	if err := c.userUsecase.Logout(ctx, userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -127,23 +201,23 @@ func (c *UserController) LogoutHandler(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
-func (c *UserController) Promote (ctx *gin.Context){
-	role,_ := ctx.Get("role")
+
+func (c *UserController) Promote(ctx *gin.Context) {
+	role, _ := ctx.Get("role")
 	if role != domain.RoleAdmin {
-		ctx.IndentedJSON(http.StatusUnauthorized, gin.H{"error":"only admin can promote user"})
+		ctx.IndentedJSON(http.StatusUnauthorized, gin.H{"error": "only admin can promote user"})
 		return
 	}
 	var pq PromotionRequest
-	if err := ctx.ShouldBindJSON(&pq); err != nil{
-		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error":err.Error()})	
+	if err := ctx.ShouldBindJSON(&pq); err != nil {
+		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := c.userUsecase.Promote(ctx, pq.Username);err!=nil{
-		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error":err.Error()})
+	if err := c.userUsecase.Promote(ctx, pq.Username); err != nil {
+		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.IndentedJSON(http.StatusOK, gin.H{"message":"Successfully Promoted User"})
-
+	ctx.IndentedJSON(http.StatusOK, gin.H{"message": "Successfully Promoted User"})
 }
 
 func (c *UserController) UpdateProfile(ctx *gin.Context) {

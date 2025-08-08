@@ -3,14 +3,17 @@ package usecases
 import (
 	domain "blog-api/Domain"
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"log"
+	"math/big"
 	"time"
 )
 
 type UserUsecase struct {
 	userRepository         domain.IUserRepository
+	emailVerificationRepo  domain.IEmailVerificationRepository
 	refreshTokenRepo       domain.IRefreshTokenRepository
 	passwordResetTokenRepo domain.IPasswordResetTokenRepository
 	JWTService             domain.IJWTService
@@ -19,10 +22,13 @@ type UserUsecase struct {
 	contextTimeout         time.Duration
 }
 
-func NewUserUseCase(userRepo domain.IUserRepository, refreshRepo domain.IRefreshTokenRepository, resetTokenRepo domain.IPasswordResetTokenRepository,
-	jwt domain.IJWTService, passwordService domain.IPasswordService, emailService domain.IEmailService, timeout time.Duration) domain.IUserUsecase {
+func NewUserUseCase(userRepo domain.IUserRepository, emailVerificationRepo domain.IEmailVerificationRepository,
+	refreshRepo domain.IRefreshTokenRepository, resetTokenRepo domain.IPasswordResetTokenRepository,
+	jwt domain.IJWTService, passwordService domain.IPasswordService, emailService domain.IEmailService,
+	timeout time.Duration) domain.IUserUsecase {
 	return &UserUsecase{
 		userRepository:         userRepo,
+		emailVerificationRepo:  emailVerificationRepo,
 		refreshTokenRepo:       refreshRepo,
 		passwordResetTokenRepo: resetTokenRepo,
 		JWTService:             jwt,
@@ -30,6 +36,16 @@ func NewUserUseCase(userRepo domain.IUserRepository, refreshRepo domain.IRefresh
 		emailService:           emailService,
 		contextTimeout:         timeout,
 	}
+}
+
+func (uc *UserUsecase) generateOTP() (string, error) {
+	// Generate a 6-digit OTP
+	max := big.NewInt(1000000)
+	n, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
 func (uc *UserUsecase) Register(ctx context.Context, user *domain.User) error {
@@ -44,7 +60,7 @@ func (uc *UserUsecase) Register(ctx context.Context, user *domain.User) error {
 		return err
 	}
 
-	//check if email or username already exists
+	// Check if email or username already exists
 	emailExists, err := uc.userRepository.ExistsByEmail(ctx, user.Email)
 	if err != nil {
 		return fmt.Errorf("failed to check email: %w", err)
@@ -61,17 +77,91 @@ func (uc *UserUsecase) Register(ctx context.Context, user *domain.User) error {
 		return domain.ErrUsernameTaken
 	}
 
-	//hash password
+	// Hash password
 	hashedPassword, err := uc.passwordService.Hash(user.Password)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 	user.Password = hashedPassword
 
-	//save user
-	_, err = uc.userRepository.Create(ctx, user)
+	// Generate OTP
+	otp, err := uc.generateOTP()
+	if err != nil {
+		return fmt.Errorf("failed to generate OTP: %w", err)
+	}
+
+	// Save user (not verified yet)
+	user.IsVerified = false
+	savedUser, err := uc.userRepository.Create(ctx, user)
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Store email verification
+	verification := &domain.EmailVerification{
+		Email:     user.Email,
+		OTP:       otp,
+		ExpiresAt: time.Now().Add(15 * time.Minute), // OTP expires in 15 minutes
+		CreatedAt: time.Now(),
+		Used:      false,
+	}
+
+	err = uc.emailVerificationRepo.Store(ctx, verification)
+	if err != nil {
+		return fmt.Errorf("failed to store verification: %w", err)
+	}
+
+	// Send verification email
+	err = uc.emailService.SendVerificationEmail(ctx, user.Email, otp)
+	if err != nil {
+		log.Printf("Failed to send verification email to %s: %v", user.Email, err)
+		// Don't fail registration if email sending fails
+	}
+
+	log.Printf("User %s registered successfully with ID: %s", savedUser.Email, savedUser.ID)
+	return nil
+}
+
+func (uc *UserUsecase) VerifyEmail(ctx context.Context, input domain.VerifyEmailInput) error {
+	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
+	defer cancel()
+
+	if input.Email == "" || input.OTP == "" {
+		return domain.ErrInvalidInput
+	}
+
+	// Find verification record
+	verification, err := uc.emailVerificationRepo.GetByOTP(ctx, input.OTP, input.Email)
+	if err != nil {
+		return fmt.Errorf("invalid or expired OTP: %w", err)
+	}
+
+	// Check if already used
+	if verification.Used {
+		return fmt.Errorf("OTP has already been used")
+	}
+
+	// Check if expired
+	if time.Now().After(verification.ExpiresAt) {
+		return fmt.Errorf("OTP has expired")
+	}
+
+	// Get user by email
+	user, err := uc.userRepository.GetByEmail(ctx, input.Email)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Mark user as verified
+	err = uc.userRepository.VerifyUser(ctx, user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to verify user: %w", err)
+	}
+
+	// Mark verification as used
+	err = uc.emailVerificationRepo.MarkUsed(ctx, verification.ID)
+	if err != nil {
+		log.Printf("Warning: failed to mark verification as used: %v", err)
 	}
 
 	return nil
@@ -96,11 +186,17 @@ func (uc *UserUsecase) Login(ctx context.Context, user *domain.User) (*domain.To
 	if dbUser == nil {
 		return nil, domain.ErrUnauthorized
 	}
+
+	// Check if user is verified
+	if !dbUser.IsVerified {
+		return nil, fmt.Errorf("email not verified. Please verify your email before logging in")
+	}
+
 	if err := uc.passwordService.Compare(dbUser.Password, user.Password); err != nil {
 		return nil, errors.New("incorrect email or password")
 	}
 
-	//generate access token
+	// Generate access token
 	accessToken, err := uc.JWTService.CreateAccessToken(dbUser)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
@@ -113,13 +209,13 @@ func (uc *UserUsecase) Login(ctx context.Context, user *domain.User) (*domain.To
 		log.Printf("successfully deleted all existing refresh tokens for user %s", dbUser.ID)
 	}
 
-	//generate refresh token
+	// Generate refresh token
 	refreshToken, refreshTokenPayload, err := uc.JWTService.CreateRefreshToken(dbUser)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
-	//store refresh token
+	// Store refresh token
 	rt := &domain.RefreshToken{
 		ID:        refreshTokenPayload.TokenID,
 		Token:     refreshToken,
@@ -155,7 +251,7 @@ func (uc *UserUsecase) Logout(ctx context.Context, userID string) error {
 		return fmt.Errorf("failed to fetch user: %w", err)
 	}
 
-	//delete all refresh tokens for the user
+	// Delete all refresh tokens for the user
 	err = uc.refreshTokenRepo.DeleteAllTokensForUser(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to logout user: %w", err)
@@ -163,6 +259,7 @@ func (uc *UserUsecase) Logout(ctx context.Context, userID string) error {
 
 	return nil
 }
+
 func (uc *UserUsecase) Promote(ctx context.Context, username string) error {
 	user, err := uc.userRepository.GetByUsername(ctx, username)
 	if err != nil {
@@ -254,7 +351,7 @@ func (uc *UserUsecase) RequestPasswordReset(ctx context.Context, input domain.Re
 		return "", fmt.Errorf("failed to send email: %w", err)
 	}
 
-	return rawToken, nil 
+	return rawToken, nil
 }
 
 func (uc *UserUsecase) ResetPassword(ctx context.Context, input domain.ResetPasswordInput) error {
