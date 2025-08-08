@@ -112,47 +112,48 @@ func (r *blogRepository) Update(ctx context.Context, blog *domain.Blog) (*domain
 }
 
 func (r *blogRepository) Filter(ctx context.Context, tag string, date string, sort string) ([]domain.Blog, error) {
-	filter := bson.M{}
+    filter := bson.M{}
 
-	if tag != "" {
-		filter["tags"] = tag
-	}
+    if tag != "" {
+        filter["tags"] = tag
+    }
 
-	if date != "" {
-		parsedDate, err := time.Parse("2006-01-02", date)
-		if err == nil {
-			start := parsedDate
-			end := parsedDate.Add(24 * time.Hour)
-			filter["createdAt"] = bson.M{
-				"$gte": start,
-				"$lt":  end,
-			}
-		}
-	}
+    if date != "" {
+        parsedDate, err := time.Parse("2006-01-02", date)
+        if err != nil {
+            return nil, fmt.Errorf("repository: invalid date format '%s', expected YYYY-MM-DD", date)
+        }
+        start := parsedDate
+        end := parsedDate.Add(24 * time.Hour)
+        filter["createdAt"] = bson.M{
+            "$gte": start,
+            "$lt":  end,
+        }
+    }
 
-	findOptions := options.Find()
-	if sort == "popular" {
-		findOptions.SetSort(bson.D{{Key: "view_count", Value: -1}})
-	} else {
-		findOptions.SetSort(bson.D{{Key: "createdAt", Value: -1}})
-	}
+    findOptions := options.Find()
+    if sort == "popular" {
+        findOptions.SetSort(bson.D{{Key: "view_count", Value: -1}})
+    } else {
+        findOptions.SetSort(bson.D{{Key: "createdAt", Value: -1}})
+    }
 
-	cursor, err := r.blogCollection.Find(ctx, filter, findOptions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch blogs: %w", err)
-	}
-	defer cursor.Close(ctx)
+    cursor, err := r.blogCollection.Find(ctx, filter, findOptions)
+    if err != nil {
+        return nil, fmt.Errorf("repository: failed to fetch blogs: %w", err)
+    }
+    defer cursor.Close(ctx)
 
-	var results []blogModel
-	if err := cursor.All(ctx, &results); err != nil {
-		return nil, fmt.Errorf("failed to decode blogs: %w", err)
-	}
+    var results []blogModel
+    if err := cursor.All(ctx, &results); err != nil {
+        return nil, fmt.Errorf("repository: failed to decode blogs: %w", err)
+    }
+	blogs := make([]domain.Blog, 0)
 
-	var blogs []domain.Blog
-	for _, b := range results {
-		blogs = append(blogs, toDomainBlog(b))
-	}
-	return blogs, nil
+    for _, b := range results {
+        blogs = append(blogs, toDomainBlog(b))
+    }
+    return blogs, nil
 }
 
 func (r *blogRepository) DeleteBlog(ctx context.Context, blog *domain.Blog) error {

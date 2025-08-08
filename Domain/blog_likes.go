@@ -20,7 +20,7 @@ type IBlogLikeRepository interface {
 
 type IBlogLikeUsecase interface {
 	LikeBlog(blogID, userID string) error
-	UnlikeBlog(blogID, userID string) error
+	RemoveLikeBlog(blogID, userID string) error
 	IsBlogLiked(blogID, userID string) (bool, error)
 	GetLikeCount(blogID string) (int, error)
 }
