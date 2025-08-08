@@ -63,8 +63,13 @@ func (bu *BlogUsecase) Update(ctx context.Context, input domain.UpdateBlogInput)
 }
 
 func (bu *BlogUsecase) FilterBlogs(ctx context.Context, tag string, date string, sort string) ([]domain.Blog, error) {
-	return bu.blogRepository.Filter(ctx, tag, date, sort)
+    blogs, err := bu.blogRepository.Filter(ctx, tag, date, sort)
+    if err != nil {
+        return nil, fmt.Errorf("usecase: failed to filter blogs: %w", err)
+    }
+    return blogs, nil
 }
+
 
 func (bu *BlogUsecase) DeleteBlog(ctx context.Context, blogID, userID, userRole string) error {
 	blog, err := bu.blogRepository.FindByID(ctx, blogID)

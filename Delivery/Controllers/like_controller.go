@@ -32,6 +32,10 @@ func (c *LikeController) LikeBlogHandler(ctx *gin.Context) {
 
 	err := c.likeUsecase.LikeBlog(id, userID)
 	if err != nil {
+		if err == domain.ErrInvalidInput {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -39,7 +43,7 @@ func (c *LikeController) LikeBlogHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "blog liked"})
 }
 
-func (c *LikeController) UnlikeBlogHandler(ctx *gin.Context) {
+func (c *LikeController) RemoveLikeBlogHandler(ctx *gin.Context) {
 	userID, ok := getAuthenticatedUserID(ctx)
 	if !ok {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
@@ -52,8 +56,12 @@ func (c *LikeController) UnlikeBlogHandler(ctx *gin.Context) {
 		return
 	}
 
-	err := c.likeUsecase.UnlikeBlog(id, userID)
+	err := c.likeUsecase.RemoveLikeBlog(id, userID)
 	if err != nil {
+		if err == domain.ErrInvalidInput {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -70,6 +78,10 @@ func (c *LikeController) GetLikeCountHandler(ctx *gin.Context) {
 
 	count, err := c.likeUsecase.GetLikeCount(id)
 	if err != nil {
+		if err == domain.ErrInvalidInput {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -92,6 +104,10 @@ func (c *LikeController) IsBlogLikedHandler(ctx *gin.Context) {
 
 	isLiked, err := c.likeUsecase.IsBlogLiked(id, userID)
 	if err != nil {
+		if err == domain.ErrInvalidInput {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

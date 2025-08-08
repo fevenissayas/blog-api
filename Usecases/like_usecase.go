@@ -24,7 +24,7 @@ func (uc *LikeUsecase) LikeBlog(blogID, userID string) error {
 	return uc.likeRepo.AddLike(like)
 }
 
-func (uc *LikeUsecase) UnlikeBlog(blogID, userID string) error {
+func (uc *LikeUsecase) RemoveLikeBlog(blogID, userID string) error {
 	return uc.likeRepo.RemoveLike(blogID, userID)
 }
 

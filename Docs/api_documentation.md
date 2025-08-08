@@ -198,6 +198,13 @@ curl -X POST http://localhost:8080/auth/refresh   -H "Authorization: Bearer <you
 
 ---
 
+
+
+
+
+
+
+
 ## Getting Started
 
 1. Run the server with:

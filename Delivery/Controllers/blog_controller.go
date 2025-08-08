@@ -21,26 +21,26 @@ type updateBlogRequest struct {
 }
 
 type GetBlogsRequest struct {
-    Page     int    `form:"page" binding:"min=1"`
-    Limit    int    `form:"limit" binding:"min=1,max=100"`
-    Sort     string `form:"sort"` // "recent", "popular", "views"
-    AuthorID string `form:"author_id"`
+	Page     int    `form:"page" binding:"min=1"`
+	Limit    int    `form:"limit" binding:"min=1,max=100"`
+	Sort     string `form:"sort"` // "recent", "popular", "views"
+	AuthorID string `form:"author_id"`
 }
 
 type PaginatedBlogsResponse struct {
-    Blogs      []domain.Blog `json:"blogs"`
-    Page       int           `json:"page"`
-    Limit      int           `json:"limit"`
-    Total      int64         `json:"total"`
-    TotalPages int           `json:"total_pages"`
-    HasNext    bool          `json:"has_next"`
-    HasPrev    bool          `json:"has_prev"`
+	Blogs      []domain.Blog `json:"blogs"`
+	Page       int           `json:"page"`
+	Limit      int           `json:"limit"`
+	Total      int64         `json:"total"`
+	TotalPages int           `json:"total_pages"`
+	HasNext    bool          `json:"has_next"`
+	HasPrev    bool          `json:"has_prev"`
 }
-
 
 type BlogController struct {
 	blogUsecase domain.IBlogUsecase
 }
+
 func NewBlogController(blogUsecase domain.IBlogUsecase) *BlogController {
 	return &BlogController{blogUsecase: blogUsecase}
 }
@@ -112,13 +112,29 @@ func (bc *BlogController) FilterBlogsHandler(ctx *gin.Context) {
 	date := ctx.Query("date")
 	sort := ctx.DefaultQuery("sort", "recent")
 
-	blogs, err := bc.blogUsecase.FilterBlogs(ctx.Request.Context(), tag, date, sort)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if sort != "recent" && sort != "popular" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort parameter. Allowed values: recent, popular"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, blogs)
+	blogs, err := bc.blogUsecase.FilterBlogs(ctx.Request.Context(), tag, date, sort)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch blogs: " + err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   blogs,
+		"meta": gin.H{
+			"filter": gin.H{
+				"tag":  tag,
+				"date": date,
+				"sort": sort,
+			},
+			"count": len(blogs),
+		},
+	})
 }
 
 func (bc *BlogController) DeleteBlog(ctx *gin.Context) {
@@ -137,71 +153,75 @@ func (bc *BlogController) DeleteBlog(ctx *gin.Context) {
 }
 
 func (bc *BlogController) SearchBlogs(ctx *gin.Context) {
-    tag := ctx.Query("tag")
-    date := ctx.Query("date")
-    sort := ctx.Query("sort")
-    title := ctx.Query("title")
-    userID := ctx.Query("userID")
+	tag := ctx.Query("tag")
+	date := ctx.Query("date")
+	sort := ctx.Query("sort")
+	title := ctx.Query("title")
+	userID := ctx.Query("userID")
 
-    blogs, err := bc.blogUsecase.SearchBlogs(ctx.Request.Context(), tag, date, sort, title, userID)
-    if err != nil {
-        ctx.JSON(500, gin.H{"error": err.Error()})
-        return
-    }
-    ctx.JSON(200, blogs)
+	blogs, err := bc.blogUsecase.SearchBlogs(ctx.Request.Context(), tag, date, sort, title, userID)
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(200, blogs)
 }
-func (bc *BlogController) AiSuggestion(ctx *gin.Context){
-   var req updateBlogRequest
-   if err := ctx.ShouldBindJSON(&req); err != nil{
-	   ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error":"invalid request"})
-	   return
-   }
-   input := domain.AiSuggestionRequest{
-	   Title: req.Title,
-	   Content: req.Content,
-	   Tags: req.Tags,
-   }
-   text, err := bc.blogUsecase.GetSuggestion(input)
-   if err != nil {
-	   ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error":err.Error()})
-	   return
-   }
-   ctx.IndentedJSON(http.StatusOK, gin.H{"Suggestion":text})
-}
+func (bc *BlogController) AiSuggestion(ctx *gin.Context) {
+	var req updateBlogRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
 
+	if req.Title == "" && req.Content == "" && (req.Tags == nil || len(req.Tags) == 0) {
+		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error": "at least one of title, content, or tags must be provided"})
+		return
+	}
+	input := domain.AiSuggestionRequest{
+		Title:   req.Title,
+		Content: req.Content,
+		Tags:    req.Tags,
+	}
+	text, err := bc.blogUsecase.GetSuggestion(input)
+	if err != nil {
+		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.IndentedJSON(http.StatusOK, gin.H{"Suggestion": text})
+}
 
 // handler for getting paginated blogs
 func (bc *BlogController) GetBlogsHandler(ctx *gin.Context) {
-    var req GetBlogsRequest
-    
-    // Set defaults
-    req.Page = 1
-    req.Limit = 10
-    req.Sort = "recent"
-    
-    if err := ctx.ShouldBindQuery(&req); err != nil {
-        ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid query parameters"})
-        return
-    }
+	var req GetBlogsRequest
 
-    result, err := bc.blogUsecase.GetBlogs(ctx.Request.Context(), req.Page, req.Limit, req.Sort, req.AuthorID)
-    if err != nil {
-        ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
+	// Set defaults
+	req.Page = 1
+	req.Limit = 10
+	req.Sort = "recent"
 
-    ctx.JSON(http.StatusOK, result)
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid query parameters"})
+		return
+	}
+
+	result, err := bc.blogUsecase.GetBlogs(ctx.Request.Context(), req.Page, req.Limit, req.Sort, req.AuthorID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, result)
 }
 
 // Handler for getting single blog (with view increment)
 func (bc *BlogController) GetBlogByIDHandler(ctx *gin.Context) {
-    blogID := ctx.Param("id")
-    
-    blog, err := bc.blogUsecase.GetByIDAndIncrementViews(ctx.Request.Context(), blogID)
-    if err != nil {
-        ctx.JSON(http.StatusNotFound, gin.H{"error": "Blog not found"})
-        return
-    }
-    
-    ctx.JSON(http.StatusOK, blog)
+	blogID := ctx.Param("id")
+
+	blog, err := bc.blogUsecase.GetByIDAndIncrementViews(ctx.Request.Context(), blogID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Blog not found"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, blog)
 }

@@ -33,12 +33,12 @@ func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController,
 		blogRoutes.DELETE("/:id",authMiddleware.Middleware(),bc.DeleteBlog)
 		blogRoutes.GET("/filter", authMiddleware.Middleware(), bc.FilterBlogsHandler)
 		blogRoutes.POST("/aisuggestion", authMiddleware.Middleware(), bc.AiSuggestion)
-		blogRoutes.GET("/search", authMiddleware.Middleware(), bc.SearchBlogs) // this shall be corrected 
+		blogRoutes.GET("/search", authMiddleware.Middleware(), bc.SearchBlogs) 
 
 		likes := blogRoutes.Group("/:id/likes",authMiddleware.Middleware())
 		{
 			likes.POST("/", likeCtrl.LikeBlogHandler)
-			likes.DELETE("/", likeCtrl.UnlikeBlogHandler)
+			likes.DELETE("/", likeCtrl.RemoveLikeBlogHandler)
 			likes.GET("/", likeCtrl.GetLikeCountHandler)
 			likes.GET("/is-liked", likeCtrl.IsBlogLikedHandler)
 		}
