@@ -44,7 +44,7 @@ func SetupRouter(uc *controllers.UserController, ac *controllers.AuthController,
 		}
 
 		// Comment endpoints
-		comments := blogRoutes.Group(":blogID/comments", authMiddleware.Middleware())
+		comments := blogRoutes.Group(":id/comments", authMiddleware.Middleware())
 		{
 			comments.POST("/", commentsController.CreateComment)
 			comments.GET("/", commentsController.GetComments)
