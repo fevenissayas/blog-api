@@ -31,7 +31,200 @@ You can test this API using the following [Postman collection](https://lively-cr
 - `POST /blogs/aisuggestion` — Get AI-generated suggestions for blog improvement (requires authentication).
     
 - `GET /blogs/search` — Search blogs with query parameters (requires authentication).
-    
+
+## Blog Endpoints
+
+### 1. GET `/blogs/`
+
+Retrieve a paginated list of blogs.
+
+**Method:** GET  
+**URL:** `/blogs/`
+
+**Query Parameters:**
+| Parameter | Type   | Required | Description                  |
+|-----------|--------|----------|------------------------------|
+| page      | int    | No       | Page number (default: 1)     |
+| limit     | int    | No       | Number of blogs per page     |
+| sort      | string | No       | "recent" (default) or "popular" |
+| authorID  | string | No       | Filter by author ID          |
+
+**Response:**
+Returns a JSON object with paginated blog data and metadata.
+
+**Example:**
+```json
+{
+  "data": [
+    {
+      "id": "12345",
+      "title": "Latest Tech Trends",
+      "content": "...",
+      "tags": ["technology"],
+      "createdAt": "2025-08-08T12:00:00Z",
+      "view_count": 150
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 100
+  }
+}
+```
+
+---
+
+### 2. GET `/blogs/:id`
+
+Retrieve a single blog by its ID.
+
+**Method:** GET  
+**URL:** `/blogs/:id`
+
+**Path Parameter:**
+| Parameter | Type   | Required | Description         |
+|-----------|--------|----------|---------------------|
+| id        | string | Yes      | Blog unique ID      |
+
+**Response:**
+Returns a JSON object with the blog details.
+
+**Example:**
+```json
+{
+  "id": "12345",
+  "title": "Latest Tech Trends",
+  "content": "...",
+  "tags": ["technology"],
+  "createdAt": "2025-08-08T12:00:00Z",
+  "view_count": 150
+}
+```
+
+---
+
+### 3. POST `/blogs/`
+
+Create a new blog post. **Requires authentication.**
+
+**Method:** POST  
+**URL:** `/blogs/`
+
+**Headers:**
+| Header         | Value                | Description                  |
+|----------------|----------------------|------------------------------|
+| Authorization  | Bearer {accessToken} | JWT access token (required)  |
+
+**Request Body:**
+| Field     | Type     | Required | Description         |
+|-----------|----------|----------|---------------------|
+| title     | string   | Yes      | Blog title          |
+| content   | string   | Yes      | Blog content        |
+| tags      | [string] | No       | Array of tags       |
+
+**Example:**
+```json
+{
+  "title": "Latest Tech Trends",
+  "content": "...",
+  "tags": ["technology", "innovation"]
+}
+```
+
+**Response:**
+Returns the created blog object.
+
+**Example:**
+```json
+{
+  "id": "12345",
+  "title": "Latest Tech Trends",
+  "content": "...",
+  "tags": ["technology", "innovation"],
+  "createdAt": "2025-08-08T12:00:00Z",
+  "view_count": 0
+}
+```
+
+---
+
+### 4. PUT `/blogs/:id`
+
+Update an existing blog post by its ID. **Requires authentication.**
+
+**Method:** PUT  
+**URL:** `/blogs/:id`
+
+**Headers:**
+| Header         | Value                | Description                  |
+|----------------|----------------------|------------------------------|
+| Authorization  | Bearer {accessToken} | JWT access token (required)  |
+
+**Path Parameter:**
+| Parameter | Type   | Required | Description         |
+|-----------|--------|----------|---------------------|
+| id        | string | Yes      | Blog unique ID      |
+
+**Request Body:**
+| Field     | Type     | Required | Description         |
+|-----------|----------|----------|---------------------|
+| title     | string   | No       | Blog title          |
+| content   | string   | No       | Blog content        |
+| tags      | [string] | No       | Array of tags       |
+
+**Example:**
+```json
+{
+  "title": "Updated Tech Trends",
+  "content": "Updated content...",
+  "tags": ["technology", "update"]
+}
+```
+
+**Response:**
+Returns the updated blog object.
+
+**Example:**
+```json
+{
+  "id": "12345",
+  "title": "Updated Tech Trends",
+  "content": "Updated content...",
+  "tags": ["technology", "update"],
+  "createdAt": "2025-08-08T12:00:00Z",
+  "view_count": 151
+}
+```
+
+---
+
+### 5. DELETE `/blogs/:id`
+
+Delete a blog post by its ID. **Requires authentication.**
+
+**Method:** DELETE  
+**URL:** `/blogs/:id`
+
+**Headers:**
+| Header         | Value                | Description                  |
+|----------------|----------------------|------------------------------|
+| Authorization  | Bearer {accessToken} | JWT access token (required)  |
+
+**Path Parameter:**
+| Parameter | Type   | Required | Description         |
+|-----------|--------|----------|---------------------|
+| id        | string | Yes      | Blog unique ID      |
+
+**Response:**
+Returns a success message.
+
+**Example:**
+```json
+{
+  "message": "Blog deleted successfully"
+}
+```
 
 ### Likes Sub-Routes (all require authentication)
 
@@ -227,7 +420,7 @@ or
     
     Returned if the request does not include a valid authorization token.
 
-## GET /blog/search
+## GET /blogs/search
 
 Search blogs based on various optional filters such as tag, date, sort order, title keywords, and user ID.
 
@@ -237,7 +430,7 @@ Search blogs based on various optional filters such as tag, date, sort order, ti
 
 - **Method:** GET
     
-- **URL:** `/blog/search`
+- **URL:** `/blogs/search`
     
 - **Headers:**
     
