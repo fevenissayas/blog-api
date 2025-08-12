@@ -174,11 +174,15 @@ func (uc *UserUsecase) Promote(ctx context.Context, username string) error {
 	return uc.userRepository.Promote(ctx, user)
 }
 
-func (uc *UserUsecase) UpdateProfile(ctx context.Context, username string, bio, profilePicture, contactInfo string) error {
+func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, bio, profilePicture, contactInfo string) error {
 	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
 	defer cancel()
 
-	user, err := uc.userRepository.GetByUsername(ctx, username)
+	if userID == "" {
+		return domain.ErrInvalidInput
+	}
+
+	user, err := uc.userRepository.GetByID(ctx, userID)
 	if err != nil {
 		if err == domain.ErrUserNotFound {
 			return domain.ErrUserNotFound
