@@ -43,7 +43,7 @@ type IUserUsecase interface {
 	Login(ctx context.Context, user *User) (*TokenResponse, error)
 	Promote(ctx context.Context, username string) error
 	Logout(ctx context.Context, userID string) error
-	UpdateProfile(ctx context.Context, username, bio, profilePicture, contactInfo string) error
+	UpdateProfile(ctx context.Context, userID, bio, profilePicture, contactInfo string) error
 	RequestPasswordReset(ctx context.Context, input RequestPasswordResetInput) (token string, err error)
 	ResetPassword(ctx context.Context, input ResetPasswordInput) error
 }
