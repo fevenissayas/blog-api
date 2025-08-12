@@ -168,7 +168,7 @@ func (uc *UserUsecase) Promote(ctx context.Context, username string) error {
 	if err != nil {
 		return err
 	}
-	if user.Role == "admin" {
+	if user.Role == domain.RoleAdmin {
 		return errors.New("user is already an admin")
 	}
 	return uc.userRepository.Promote(ctx, user)

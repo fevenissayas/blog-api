@@ -128,9 +128,10 @@ func (c *UserController) LogoutHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 func (c *UserController) Promote (ctx *gin.Context){
-	role := ctx.GetString("role")
-	if role != "admin" {
+	role,_ := ctx.Get("role")
+	if role != domain.RoleAdmin {
 		ctx.IndentedJSON(http.StatusUnauthorized, gin.H{"error":"only admin can promote user"})
+		return
 	}
 	var pq PromotionRequest
 	if err := ctx.ShouldBindJSON(&pq); err != nil{
