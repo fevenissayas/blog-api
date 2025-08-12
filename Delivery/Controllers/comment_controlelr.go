@@ -17,7 +17,7 @@ func NewCommentController(commentUsecase domain.ICommentUsecase) *CommentControl
 
 // Create a new comment for a blog
 func (cc *CommentController) CreateComment(ctx *gin.Context) {
-    blogID := ctx.Param("blogID")
+    blogID := ctx.Param("id")
     var req domain.CreateCommentRequest
     if err := ctx.ShouldBindJSON(&req); err != nil {
         ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
@@ -37,7 +37,7 @@ func (cc *CommentController) CreateComment(ctx *gin.Context) {
 
 // Get all comments for a blog
 func (cc *CommentController) GetComments(ctx *gin.Context) {
-    blogID := ctx.Param("blogID")
+    blogID := ctx.Param("id")
     comments, err := cc.commentUsecase.GetCommentsByBlogID(ctx.Request.Context(), blogID)
     if err != nil {
         ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
