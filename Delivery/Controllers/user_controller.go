@@ -147,17 +147,19 @@ func (c *UserController) Promote (ctx *gin.Context){
 }
 
 func (c *UserController) UpdateProfile(ctx *gin.Context) {
-	username := ctx.Param("username")
 	var req UpdateProfileRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON body"})
 		return
 	}
-	if username == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Username is required"})
+
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	err := c.userUsecase.UpdateProfile(ctx, username, req.Bio, req.ProfilePicture, req.ContactInfo)
+
+	err := c.userUsecase.UpdateProfile(ctx, userID, req.Bio, req.ProfilePicture, req.ContactInfo)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
