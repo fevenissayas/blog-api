@@ -46,7 +46,6 @@ type userRepository struct {
 }
 
 func NewUserRepository(db *mongo.Database) domain.IUserRepository {
-
 	collection := db.Collection("user")
 	return &userRepository{userCollection: collection}
 }
@@ -133,20 +132,21 @@ func (r *userRepository) ExistsByUsername(ctx context.Context, username string) 
 	}
 	return count > 0, nil
 }
-func (r *userRepository) Promote (ctx context.Context, user *domain.User)(error){
+
+func (r *userRepository) Promote(ctx context.Context, user *domain.User) error {
 	objID, err := primitive.ObjectIDFromHex(user.ID)
 	if err != nil {
-		return fmt.Errorf("invalid blog ID: %w", err)
+		return fmt.Errorf("invalid user ID: %w", err)
 	}
 	update := bson.M{
 		"$set": bson.M{
-			"role": domain.RoleAdmin,
-			"updatedAt": user.UpdatedAt,
+			"role":      domain.RoleAdmin,
+			"updatedAt": time.Now(),
 		},
 	}
 	_, err = r.userCollection.UpdateByID(ctx, objID, update)
 	if err != nil {
-		return fmt.Errorf("failed to update blog: %w", err)
+		return fmt.Errorf("failed to promote user: %w", err)
 	}
 	return nil
 }
@@ -158,10 +158,10 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	}
 	update := bson.M{
 		"$set": bson.M{
-			"bio": user.Bio,
+			"bio":             user.Bio,
 			"profile_picture": user.ProfilePicture,
-			"contact_info": user.ContactInfo,
-			"updatedAt": user.UpdatedAt,
+			"contact_info":    user.ContactInfo,
+			"updatedAt":       user.UpdatedAt,
 		},
 	}
 	_, err = r.userCollection.UpdateByID(ctx, objID, update)
@@ -172,11 +172,42 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 }
 
 func (r *userRepository) UpdatePassword(ctx context.Context, userID string, hashedPassword string) error {
-	objID, _ := primitive.ObjectIDFromHex(userID)
-	_, err := r.userCollection.UpdateOne(
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user ID: %w", err)
+	}
+	_, err = r.userCollection.UpdateOne(
 		ctx,
 		bson.M{"_id": objID},
-		bson.M{"$set": bson.M{"password": hashedPassword}},
+		bson.M{"$set": bson.M{"password": hashedPassword, "updatedAt": time.Now()}},
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+	return nil
+}
+
+func (r *userRepository) VerifyUser(ctx context.Context, userID string) error {
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"isVerified": true,
+			"updatedAt":  time.Now(),
+		},
+	}
+
+	result, err := r.userCollection.UpdateByID(ctx, objID, update)
+	if err != nil {
+		return fmt.Errorf("failed to verify user: %w", err)
+	}
+
+	if result.ModifiedCount == 0 {
+		return fmt.Errorf("user not found or already verified")
+	}
+
+	return nil
 }

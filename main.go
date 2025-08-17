@@ -21,9 +21,7 @@ func main() {
 	passwordService := infrastructure.NewPasswordService()
 	authMiddleware := infrastructure.NewAuthMiddleware(jwtService)
 
-	
 	smtpPort := infrastructure.ParsePort(infrastructure.Env.EMAIL_PORT, 465)
-
 
 	emailService := infrastructure.NewSMTPEmailService(
 		infrastructure.Env.EMAIL_FROM,
@@ -33,32 +31,48 @@ func main() {
 		infrastructure.Env.EMAIL_PASSWORD,
 	)
 
+	// Initialize repositories
 	userRepository := repositories.NewUserRepository(db)
+	emailVerificationRepo := repositories.NewEmailVerificationRepository(db)
 	refreshRepository := repositories.NewRefreshTokenRepository(db)
 	blogRepository := repositories.NewBlogRepository(db)
 	resetPasswordRepo := repositories.NewPasswordResetTokenRepo(db)
-	likeRepo :=repositories.NewLikeRepository(db)
+	likeRepo := repositories.NewLikeRepository(db)
 	commentRepository := repositories.NewCommentRepository(db)
 
-    Aiservice:= infrastructure.NewAiService()
+	// Initialize AI service
+	Aiservice := infrastructure.NewAiService()
 
-	userUsecase := usecases.NewUserUseCase(userRepository, refreshRepository, resetPasswordRepo, jwtService, passwordService, emailService, 3*time.Second)
+	// Initialize use cases
+	userUsecase := usecases.NewUserUseCase(
+		userRepository,
+		emailVerificationRepo,
+		refreshRepository,
+		resetPasswordRepo,
+		jwtService,
+		passwordService,
+		emailService,
+		3*time.Second,
+	)
 	authUsecase := usecases.NewAuthUsecase(jwtService, userRepository, refreshRepository, 3*time.Second)
-	blogUsecase := usecases.NewBlogUseCase(blogRepository,Aiservice)
+	blogUsecase := usecases.NewBlogUseCase(blogRepository, Aiservice)
 	likeUsecase := usecases.NewLikeUsecase(likeRepo)
 	commentUsecase := usecases.NewCommentUsecase(commentRepository)
 
+	// Initialize controllers
 	userController := controllers.NewUserController(userUsecase)
 	authController := controllers.NewAuthController(authUsecase)
 	blogController := controllers.NewBlogController(blogUsecase)
 	likeController := controllers.NewLikeController(likeUsecase)
 	commentController := controllers.NewCommentController(commentUsecase)
 
-	r := router.SetupRouter(userController, authController, blogController, likeController,authMiddleware, commentController)
+	// Setup router
+	r := router.SetupRouter(userController, authController, blogController, likeController, authMiddleware, commentController)
 
 	port := infrastructure.Env.PORT
 	if port == "" {
 		port = "8080"
 	}
+	
 	r.Run(":" + port)
 }
